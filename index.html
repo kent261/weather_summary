@@ -370,10 +370,15 @@
     function hideTooltip() { tooltip.style("opacity", 0); }
 
     function rowParser(d) {
-      const dateText = d.date || d["\ufeffdate"];
+      const dateText = String(d.date ?? d["\ufeffdate"] ?? Object.values(d)[0] ?? "")
+        .replace(/^\ufeff/, "")
+        .trim();
+      const date = /^\d{4}-\d{2}-\d{2}$/.test(dateText)
+        ? new Date(`${dateText}T00:00:00Z`)
+        : null;
       return {
         dateText,
-        date: parseDate(dateText),
+        date,
         hour: +d.hour,
         city: d.city,
         rainfall: Number.isFinite(+d.rainfall_mm) ? +d.rainfall_mm : 0,
