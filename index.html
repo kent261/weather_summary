@@ -390,10 +390,11 @@
       };
     }
 
-    const dataUrl = "https://raw.githubusercontent.com/kent261/weather_summary/main/data/weather-hourly.csv";
+    const dataVersion = new Date().toISOString().slice(0, 10);
+    const dataUrl = `https://raw.githubusercontent.com/kent261/weather_summary/main/data/weather-hourly.csv?v=${dataVersion}`;
     d3.csv(dataUrl, rowParser).then(rows => {
       allRows = rows.filter(d => d.date && d.hour >= 10 && d.hour <= 22);
-      if (!allRows.length) throw new Error(`資料檔沒有可顯示的觀測值（原始列數 ${rows.length}；首列 ${JSON.stringify(rows[0] || {})}）`);
+      if (!allRows.length) throw new Error("資料檔沒有可顯示的觀測值");
 
       const minDate = d3.min(allRows, d => d.date);
       const maxDate = d3.max(allRows, d => d.date);
