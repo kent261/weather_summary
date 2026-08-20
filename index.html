@@ -1,18 +1,18 @@
 <!doctype html>
-<html lang="zh-Hant">
+<html lang="en">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="description" content="五城市營業時段天氣觀測儀表板">
+  <meta name="description" content="Business-hours weather dashboard for five cities in Taiwan">
   <meta property="og:type" content="website">
-  <meta property="og:title" content="五城市營業時段天氣">
-  <meta property="og:description" content="臺北、新北、桃園、臺中與高雄每日 10:00–22:00 天氣觀測儀表板">
+  <meta property="og:title" content="Five-City Business Hours Weather">
+  <meta property="og:description" content="Hourly weather observations from 10:00 to 22:00 for Taipei, New Taipei, Taoyuan, Taichung, and Kaohsiung">
   <meta property="og:image" content="og.png">
   <meta name="twitter:card" content="summary_large_image">
-  <meta name="twitter:title" content="五城市營業時段天氣">
-  <meta name="twitter:description" content="五城市營業時段天氣觀測儀表板">
+  <meta name="twitter:title" content="Five-City Business Hours Weather">
+  <meta name="twitter:description" content="Business-hours weather dashboard for five cities in Taiwan">
   <meta name="twitter:image" content="og.png">
-  <title>五城市營業時段天氣儀表板</title>
+  <title>Five-City Business Hours Weather Dashboard</title>
   <script src="https://cdn.jsdelivr.net/npm/d3@7.9.0/dist/d3.min.js"></script>
   <style>
     :root {
@@ -280,60 +280,60 @@
     <header class="hero">
       <div>
         <p class="eyebrow">Business Hours Weather</p>
-        <h1>五城市營業時段天氣</h1>
-        <p class="subtitle">聚焦每日 10:00–22:00，快速比較臺北、新北、桃園、臺中與高雄的每日天氣與逐時降雨。</p>
+        <h1>Five-City Business Hours Weather</h1>
+        <p class="subtitle">Compare daily conditions and hourly rainfall from 10:00 to 22:00 across Taipei, New Taipei, Taoyuan, Taichung, and Kaohsiung.</p>
       </div>
-      <div class="data-note" id="dataNote">正在讀取資料…</div>
+      <div class="data-note" id="dataNote">Loading data…</div>
     </header>
 
-    <section class="panel filters" aria-label="資料篩選">
-      <label>城市
-        <select id="cityFilter"><option value="all">全部城市</option></select>
+    <section class="panel filters" aria-label="Data filters">
+      <label>City
+        <select id="cityFilter"><option value="all">All cities</option></select>
       </label>
-      <label>快速期間
+      <label>Date range
         <select id="rangePreset">
-          <option value="3">最近 3 天</option>
-          <option value="7" selected>最近 7 天</option>
-          <option value="14">最近 14 天</option>
-          <option value="30">最近 30 天</option>
-          <option value="month">本月</option>
-          <option value="custom">自訂期間</option>
+          <option value="3">Last 3 days</option>
+          <option value="7" selected>Last 7 days</option>
+          <option value="14">Last 14 days</option>
+          <option value="30">Last 30 days</option>
+          <option value="month">This month</option>
+          <option value="custom">Custom range</option>
         </select>
       </label>
-      <label>開始日期
+      <label>Start date
         <input id="startDate" type="date">
       </label>
-      <label>結束日期
+      <label>End date
         <input id="endDate" type="date">
       </label>
-      <a class="download" href="data/weather-hourly.csv" download>下載原始 CSV</a>
+      <a class="download" href="data/weather-hourly.csv" download>Download source CSV</a>
     </section>
 
-    <div class="panel status visible" id="status" role="status">資料載入中，請稍候…</div>
+    <div class="panel status visible" id="status" role="status">Loading data…</div>
 
     <section class="panel daily-summary" id="dailySummary" hidden>
-      <div class="panel-head"><h2>每日城市天氣摘要</h2><p>營業時段 10:00–22:00｜最新日期優先</p></div>
+      <div class="panel-head"><h2>Daily Weather Summary</h2><p>Business hours 10:00–22:00 | Newest first</p></div>
       <div class="daily-summary-list" id="dailySummaryList"></div>
     </section>
 
     <section class="grid-main" id="mainCharts" hidden>
       <article class="panel chart-panel">
-        <div class="panel-head"><h2>每日累積雨量</h2><p>單位：mm</p></div>
-        <div class="legend" id="lineLegend" aria-label="點擊城市名稱顯示或隱藏折線"></div>
-        <div class="chart" id="rainTrend" role="img" aria-label="各城市每日累積雨量折線圖"></div>
+        <div class="panel-head"><h2>Daily Rainfall</h2><p>Unit: mm</p></div>
+        <div class="legend" id="lineLegend" aria-label="Select a city to show or hide its line"></div>
+        <div class="chart" id="rainTrend" role="img" aria-label="Daily rainfall line chart by city"></div>
       </article>
     </section>
 
     <section class="grid-secondary" id="secondaryCharts" hidden>
       <article class="panel chart-panel">
-        <div class="panel-head"><h2>逐時降雨熱力圖</h2><p>日期 × 10:00–22:00｜依城市分區</p></div>
-        <div class="chart compact" id="rainHeatmap" role="img" aria-label="各城市逐日逐時雨量熱力圖"></div>
+        <div class="panel-head"><h2>Hourly Rainfall Heatmap</h2><p>Date × 10:00–22:00 | Grouped by city</p></div>
+        <div class="chart compact" id="rainHeatmap" role="img" aria-label="Hourly rainfall heatmap by date and city"></div>
       </article>
       <article class="panel chart-panel">
-        <div class="panel-head"><h2>雨量最高日期</h2><p>依城市與日期彙總</p></div>
+        <div class="panel-head"><h2>Wettest Dates</h2><p>Daily totals by city</p></div>
         <div class="table-wrap">
           <table>
-            <thead><tr><th>排名</th><th>日期</th><th>城市</th><th class="num">雨量 mm</th></tr></thead>
+            <thead><tr><th>Rank</th><th>Date</th><th>City</th><th class="num">Rainfall mm</th></tr></thead>
             <tbody id="wettestTable"></tbody>
           </table>
         </div>
@@ -341,8 +341,8 @@
     </section>
 
     <footer>
-      資料來源：中央氣象署 CODiS 測站逐時觀測資料｜營業時段 10:00–22:00
-      <span class="station-source">測站：臺北（466920）・新北（466881）・新屋／桃園（467050）・臺中（467490）・高雄（467441）</span>
+      Source: Central Weather Administration CODiS hourly observations | Business hours 10:00–22:00
+      <span class="station-source">Stations: Taipei (466920) · New Taipei (466881) · Xinwu / Taoyuan (467050) · Taichung (467490) · Kaohsiung (467441)</span>
     </footer>
   </main>
   <div class="tooltip" id="tooltip" role="tooltip"></div>
@@ -352,11 +352,19 @@
     const formatDate = d3.utcFormat("%Y-%m-%d");
     const displayDate = d3.utcFormat("%Y/%m/%d");
     const cityOrder = ["台北", "新北", "桃園", "台中", "高雄"];
+    const cityLabels = new Map([
+      ["台北", "Taipei"], ["新北", "New Taipei"], ["桃園", "Taoyuan"],
+      ["台中", "Taichung"], ["高雄", "Kaohsiung"]
+    ]);
     const cityColors = new Map([
       ["台北", "#2878d0"], ["新北", "#20a4c7"], ["桃園", "#e9872b"],
       ["台中", "#3c9b72"], ["高雄", "#d34b55"]
     ]);
-    const weekdays = ["一", "二", "三", "四", "五", "六", "日"];
+    const weekdays = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
+    const weatherLabels = new Map([
+      ["晴", "Clear"], ["多雲", "Partly cloudy"], ["陰", "Cloudy"], ["無雨", "Dry"],
+      ["雨跡", "Trace rain"], ["小雨", "Light rain"], ["中雨", "Moderate rain"], ["大雨", "Heavy rain"]
+    ]);
     const tooltip = d3.select("#tooltip");
     let allRows = [];
     let filteredRows = [];
@@ -394,7 +402,7 @@
     const dataUrl = `https://raw.githubusercontent.com/kent261/weather_summary/main/data/weather-hourly.csv?v=${dataVersion}`;
     d3.csv(dataUrl, rowParser).then(rows => {
       allRows = rows.filter(d => d.date && d.hour >= 10 && d.hour <= 22);
-      if (!allRows.length) throw new Error("資料檔沒有可顯示的觀測值");
+      if (!allRows.length) throw new Error("No valid observations were found in the data file.");
 
       const minDate = d3.min(allRows, d => d.date);
       const maxDate = d3.max(allRows, d => d.date);
@@ -403,11 +411,11 @@
       activeCities = new Set(availableCities);
 
       d3.select("#cityFilter").selectAll("option.city")
-        .data(availableCities).join("option").attr("class", "city").attr("value", d => d).text(d => d);
+        .data(availableCities).join("option").attr("class", "city").attr("value", d => d).text(d => cityLabels.get(d) || d);
 
       d3.select("#startDate").attr("min", formatDate(minDate)).attr("max", formatDate(maxDate)).property("value", formatDate(start7 < minDate ? minDate : start7));
       d3.select("#endDate").attr("min", formatDate(minDate)).attr("max", formatDate(maxDate)).property("value", formatDate(maxDate));
-      d3.select("#dataNote").html(`<strong>${d3.format(",")(allRows.length)}</strong> 筆觀測<br>${displayDate(minDate)}–${displayDate(maxDate)}`);
+      d3.select("#dataNote").html(`<strong>${d3.format(",")(allRows.length)}</strong> observations<br>${displayDate(minDate)}–${displayDate(maxDate)}`);
 
       d3.select("#cityFilter").on("change", () => {
         const city = d3.select("#cityFilter").property("value");
@@ -438,8 +446,8 @@
         resizeTimer = setTimeout(drawAll, 120);
       }).observe(document.querySelector(".page"));
     }).catch(error => {
-      d3.select("#status").classed("visible", true).text(`無法載入資料：${error.message}`);
-      d3.select("#dataNote").text("資料載入失敗");
+      d3.select("#status").classed("visible", true).text(`Unable to load data: ${error.message}`);
+      d3.select("#dataNote").text("Data unavailable");
     });
 
     function updateDashboard() {
@@ -449,7 +457,7 @@
       filteredRows = allRows.filter(d => d.date >= start && d.date <= end && (city === "all" || d.city === city));
 
       if (!filteredRows.length) {
-        d3.select("#status").classed("visible", true).text("所選範圍沒有資料，請調整日期或城市。");
+        d3.select("#status").classed("visible", true).text("No data is available for this selection. Adjust the date range or city.");
         d3.selectAll("#dailySummary, #mainCharts, #secondaryCharts").attr("hidden", true);
         return;
       }
@@ -481,12 +489,12 @@
       const rainfall = d3.sum(rows, d => d.rainfall);
       const maxRain = d3.max(rows, d => d.rainfall) || 0;
       const sunshine = d3.sum(rows, d => d.sunshine);
-      let icon = "☁️", label = "陰天";
-      if (heavyHours > 0 || maxRain >= 15) { icon = "⛈️"; label = "強降雨"; }
-      else if (rainfall >= 10 || rainyHours >= 6) { icon = "🌧️"; label = "多雨"; }
-      else if (rainyHours > 0) { icon = "🌦️"; label = "有雨"; }
-      else if (sunshine >= 4) { icon = "☀️"; label = "晴朗"; }
-      else if (sunshine >= 1.5) { icon = "🌤️"; label = "晴時多雲"; }
+      let icon = "☁️", label = "Cloudy";
+      if (heavyHours > 0 || maxRain >= 15) { icon = "⛈️"; label = "Heavy rain"; }
+      else if (rainfall >= 10 || rainyHours >= 6) { icon = "🌧️"; label = "Rainy"; }
+      else if (rainyHours > 0) { icon = "🌦️"; label = "Showers"; }
+      else if (sunshine >= 4) { icon = "☀️"; label = "Clear"; }
+      else if (sunshine >= 1.5) { icon = "🌤️"; label = "Partly cloudy"; }
       return {icon, label, rainyHours, heavyHours, rainfall};
     }
 
@@ -503,11 +511,11 @@
       const rows = d3.select("#dailySummaryList").selectAll("div.daily-row").data(grouped, d => d.dateText).join("div").attr("class", "daily-row");
       rows.selectAll("*").remove();
       rows.append("div").attr("class", "daily-date")
-        .html(d => `${d.dateText.replaceAll("-", "/")}<span>星期${weekdays[(d.date.getUTCDay() + 6) % 7]}</span>`);
+        .html(d => `${d.dateText.replaceAll("-", "/")}<span>${weekdays[(d.date.getUTCDay() + 6) % 7]}</span>`);
       rows.append("div").attr("class", "city-weather-grid").selectAll("div.weather-summary")
         .data(d => d.cities).join("div").attr("class", "weather-summary")
-        .attr("title", d => `${d.city}｜${d.label}｜營業時段雨量 ${d3.format(".1f")(d.rainfall)} mm`)
-        .html(d => `<div class="weather-icon" aria-hidden="true">${d.icon}</div><div><div class="weather-city">${d.city}・${d.label}</div><div class="weather-detail">雨量 ${d3.format(".1f")(d.rainfall)} mm</div></div>`);
+        .attr("title", d => `${cityLabels.get(d.city) || d.city} | ${d.label} | Business-hours rainfall ${d3.format(".1f")(d.rainfall)} mm`)
+        .html(d => `<div class="weather-icon" aria-hidden="true">${d.icon}</div><div><div class="weather-city">${cityLabels.get(d.city) || d.city} · ${d.label}</div><div class="weather-detail">Rainfall ${d3.format(".1f")(d.rainfall)} mm</div></div>`);
     }
 
     function drawRainTrend() {
@@ -545,7 +553,7 @@
         const lines = daily.map(series => {
           const i = d3.bisector(d => d.date).center(series.values, date);
           const point = series.values[i];
-          return point ? `<span style="color:${cityColors.get(series.city)}">●</span> ${series.city}：${d3.format(".1f")(point.rainfall)} mm` : "";
+          return point ? `<span style="color:${cityColors.get(series.city)}">●</span> ${cityLabels.get(series.city) || series.city}: ${d3.format(".1f")(point.rainfall)} mm` : "";
         }).join("<br>");
         guide.attr("x1", mx).attr("x2", mx).style("display", null);
         showTooltip(event, `<strong>${displayDate(date)}</strong><br>${lines}`);
@@ -553,8 +561,8 @@
 
       d3.select("#lineLegend").selectAll("button.legend-button").data(allDaily, d => d.city).join("button")
         .attr("class", "legend-button").attr("type", "button").attr("aria-pressed", d => activeCities.has(d.city))
-        .attr("aria-label", d => `${activeCities.has(d.city) ? "隱藏" : "顯示"}${d.city}折線`)
-        .html(d => `<span class="legend-dot" style="background:${cityColors.get(d.city)}"></span>${d.city}`)
+        .attr("aria-label", d => `${activeCities.has(d.city) ? "Hide" : "Show"} ${cityLabels.get(d.city) || d.city} line`)
+        .html(d => `<span class="legend-dot" style="background:${cityColors.get(d.city)}"></span>${cityLabels.get(d.city) || d.city}`)
         .on("click", (_, d) => {
           if (activeCities.has(d.city) && activeCities.size === 1) return;
           if (activeCities.has(d.city)) activeCities.delete(d.city); else activeCities.add(d.city);
@@ -596,15 +604,15 @@
       cities.forEach((city, cityIndex) => {
         const top = margin.top + cityIndex * (cityGridHeight + cityGap) + 18;
         const y = d3.scaleBand().domain(hours).range([top, top + cityGridHeight]).padding(.06);
-        svg.append("text").attr("x", margin.left).attr("y", top - 8).attr("fill", cityColors.get(city)).attr("font-size", 12).attr("font-weight", 700).text(city);
+        svg.append("text").attr("x", margin.left).attr("y", top - 8).attr("fill", cityColors.get(city)).attr("font-size", 12).attr("font-weight", 700).text(cityLabels.get(city) || city);
         svg.append("g").attr("class", "axis").attr("transform", `translate(${margin.left},0)`)
           .call(d3.axisLeft(y).tickFormat(d => `${d}:00`).tickSize(0)).call(g => g.select(".domain").remove());
         svg.selectAll(`rect.cell-${cityIndex}`).data(values.filter(d => d.city === city)).join("rect")
           .attr("class", `cell-${cityIndex}`).attr("x", d => x(d.dateText)).attr("y", d => y(d.hour))
           .attr("width", x.bandwidth()).attr("height", y.bandwidth()).attr("rx", 1.5).attr("fill", d => color(d.intensity))
-          .on("mousemove", (event,d) => showTooltip(event, `<strong>${d.dateText.replaceAll("-", "/")}・${d.city} ${d.hour}:00</strong><br>${d.rainy && d.rainfall === 0 ? "雨跡" : `雨量 ${d3.format(".1f")(d.rainfall)} mm`}<br>${d.weather || "—"}・${Number.isFinite(d.temp) ? d3.format(".1f")(d.temp) + " °C" : "氣溫—"}`))
+          .on("mousemove", (event,d) => showTooltip(event, `<strong>${d.dateText.replaceAll("-", "/")} · ${cityLabels.get(d.city) || d.city} ${d.hour}:00</strong><br>${d.rainy && d.rainfall === 0 ? "Trace rain" : `Rainfall ${d3.format(".1f")(d.rainfall)} mm`}<br>${weatherLabels.get(d.weather) || d.weather || "—"} · ${Number.isFinite(d.temp) ? d3.format(".1f")(d.temp) + " °C" : "Temperature —"}`))
           .on("mouseleave", hideTooltip)
-          .append("title").text(d => `${d.dateText} ${d.city} ${d.hour}:00，${d.rainy && d.rainfall === 0 ? "雨跡" : `雨量 ${d3.format(".1f")(d.rainfall)} mm`}`);
+          .append("title").text(d => `${d.dateText} ${cityLabels.get(d.city) || d.city} ${d.hour}:00, ${d.rainy && d.rainfall === 0 ? "Trace rain" : `Rainfall ${d3.format(".1f")(d.rainfall)} mm`}`);
       });
     }
 
@@ -613,7 +621,7 @@
         .flatMap(([city, dates]) => dates.map(([dateText, metrics]) => ({city, dateText, ...metrics})))
         .sort((a,b) => d3.descending(a.rainfall, b.rainfall) || d3.ascending(a.dateText, b.dateText)).slice(0, 8);
       d3.select("#wettestTable").selectAll("tr").data(values).join("tr").html((d,i) =>
-        `<td>${i + 1}</td><td>${d.dateText.replaceAll("-", "/")}</td><td>${d.city}</td><td class="num">${d3.format(".1f")(d.rainfall)}</td>`
+        `<td>${i + 1}</td><td>${d.dateText.replaceAll("-", "/")}</td><td>${cityLabels.get(d.city) || d.city}</td><td class="num">${d3.format(".1f")(d.rainfall)}</td>`
       );
     }
   </script>
