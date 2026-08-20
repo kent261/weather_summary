@@ -1,0 +1,614 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="五城市營業時段天氣觀測儀表板">
+  <meta property="og:type" content="website">
+  <meta property="og:title" content="五城市營業時段天氣">
+  <meta property="og:description" content="臺北、新北、桃園、臺中與高雄每日 10:00–22:00 天氣觀測儀表板">
+  <meta property="og:image" content="og.png">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="五城市營業時段天氣">
+  <meta name="twitter:description" content="五城市營業時段天氣觀測儀表板">
+  <meta name="twitter:image" content="og.png">
+  <title>五城市營業時段天氣儀表板</title>
+  <script src="https://cdn.jsdelivr.net/npm/d3@7.9.0/dist/d3.min.js"></script>
+  <style>
+    :root {
+      color-scheme: light;
+      --ink: #14213d;
+      --muted: #667085;
+      --surface: #ffffff;
+      --canvas: #f4f7fb;
+      --line: #dfe6ef;
+      --navy: #183153;
+      --blue: #2878d0;
+      --cyan: #20a4c7;
+      --orange: #e9872b;
+      --green: #3c9b72;
+      --red: #d34b55;
+      --shadow: 0 12px 34px rgba(20, 33, 61, .08);
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      color: var(--ink);
+      background:
+        radial-gradient(circle at 90% 5%, rgba(40, 120, 208, .10), transparent 28rem),
+        var(--canvas);
+      font-family: Inter, "Noto Sans TC", "PingFang TC", "Microsoft JhengHei", system-ui, sans-serif;
+    }
+
+    button, input, select { font: inherit; }
+
+    .page {
+      width: min(1440px, 100%);
+      margin: 0 auto;
+      padding: 32px clamp(16px, 3vw, 44px) 56px;
+    }
+
+    .hero {
+      display: flex;
+      align-items: flex-end;
+      justify-content: space-between;
+      gap: 24px;
+      margin-bottom: 24px;
+    }
+
+    .eyebrow {
+      margin: 0 0 8px;
+      color: var(--blue);
+      font-size: 13px;
+      font-weight: 700;
+      letter-spacing: .12em;
+      text-transform: uppercase;
+    }
+
+    h1 {
+      margin: 0;
+      font-size: clamp(30px, 4vw, 50px);
+      line-height: 1.08;
+      letter-spacing: -.035em;
+    }
+
+    .subtitle {
+      max-width: 720px;
+      margin: 12px 0 0;
+      color: var(--muted);
+      font-size: 16px;
+      line-height: 1.7;
+    }
+
+    .data-note {
+      flex: 0 0 auto;
+      color: var(--muted);
+      font-size: 13px;
+      text-align: right;
+    }
+
+    .data-note strong { color: var(--ink); }
+
+    .panel {
+      background: var(--surface);
+      border: 1px solid var(--line);
+      border-radius: 18px;
+      box-shadow: var(--shadow);
+    }
+
+    .filters {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(140px, 1fr)) auto;
+      gap: 14px;
+      align-items: end;
+      padding: 18px;
+      margin-bottom: 18px;
+    }
+
+    label {
+      display: grid;
+      gap: 7px;
+      color: var(--muted);
+      font-size: 13px;
+      font-weight: 700;
+    }
+
+    input, select, button, .download {
+      min-height: 42px;
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      background: var(--surface);
+      color: var(--ink);
+    }
+
+    input, select { width: 100%; padding: 9px 11px; }
+
+    button, .download {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      padding: 9px 15px;
+      font-weight: 700;
+      text-decoration: none;
+      cursor: pointer;
+    }
+
+    button:hover, .download:hover { border-color: var(--blue); }
+    button:focus-visible, .download:focus-visible, input:focus-visible, select:focus-visible {
+      outline: 3px solid rgba(40, 120, 208, .22);
+      outline-offset: 2px;
+    }
+
+    .download {
+      background: var(--navy);
+      border-color: var(--navy);
+      color: white;
+    }
+
+    .grid-main, .grid-secondary {
+      display: grid;
+      gap: 18px;
+      margin-bottom: 18px;
+    }
+
+    .grid-main { grid-template-columns: 1fr; }
+    .grid-secondary { grid-template-columns: minmax(0, 1.55fr) minmax(360px, .65fr); }
+
+    .chart-panel { padding: 22px 22px 14px; min-width: 0; }
+    .panel-head { display: flex; justify-content: space-between; align-items: baseline; gap: 14px; margin-bottom: 10px; }
+    .panel-head h2 { margin: 0; font-size: 17px; }
+    .panel-head p { margin: 0; color: var(--muted); font-size: 12px; }
+    .chart { width: 100%; min-height: 320px; }
+    .chart.compact { min-height: 270px; }
+    .chart svg { display: block; width: 100%; height: auto; overflow: visible; }
+
+    .axis text { fill: var(--muted); font-size: 11px; }
+    .axis path, .axis line { stroke: var(--line); }
+    .grid line { stroke: var(--line); stroke-opacity: .75; }
+    .grid path { display: none; }
+    .axis-label { fill: var(--muted); font-size: 11px; }
+
+    .legend { display: flex; flex-wrap: wrap; gap: 10px 16px; margin: 4px 0 2px; }
+    .legend-button {
+      min-height: auto;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 4px 2px;
+      border: 0;
+      border-radius: 0;
+      background: transparent;
+      color: var(--ink);
+      font-size: 12px;
+      font-weight: 700;
+    }
+    .legend-button[aria-pressed="false"] { color: var(--muted); opacity: .48; }
+    .legend-button[aria-pressed="false"] .legend-dot { filter: grayscale(1); }
+    .legend-dot { width: 9px; height: 9px; border-radius: 50%; }
+
+    .daily-summary { padding: 22px; margin-bottom: 18px; }
+    .daily-summary-list { display: grid; gap: 12px; margin-top: 14px; }
+    .daily-row {
+      display: grid;
+      grid-template-columns: 112px minmax(0, 1fr);
+      gap: 14px;
+      align-items: start;
+      padding-top: 12px;
+      border-top: 1px solid var(--line);
+    }
+    .daily-date { font-size: 13px; font-weight: 750; }
+    .daily-date span { display: block; margin-top: 3px; color: var(--muted); font-size: 12px; font-weight: 500; }
+    .city-weather-grid { display: grid; grid-template-columns: repeat(5, minmax(122px, 1fr)); gap: 9px; }
+    .weather-summary {
+      min-width: 0;
+      display: grid;
+      grid-template-columns: 34px minmax(0, 1fr);
+      gap: 8px;
+      align-items: center;
+      padding: 10px;
+      border-radius: 12px;
+      background: #f6f8fb;
+    }
+    .weather-icon { font-size: 25px; line-height: 1; text-align: center; }
+    .weather-city { font-size: 13px; font-weight: 750; }
+    .weather-detail { margin-top: 3px; color: var(--muted); font-size: 11px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    #rainHeatmap { overflow-x: auto; padding-bottom: 5px; }
+
+    .tooltip {
+      position: fixed;
+      z-index: 20;
+      max-width: 240px;
+      padding: 9px 11px;
+      border-radius: 9px;
+      background: rgba(20, 33, 61, .96);
+      color: white;
+      font-size: 12px;
+      line-height: 1.5;
+      pointer-events: none;
+      opacity: 0;
+      transform: translate(10px, -12px);
+    }
+
+    .table-wrap { overflow-x: auto; }
+    table { width: 100%; border-collapse: collapse; font-size: 13px; }
+    th, td { padding: 11px 9px; border-bottom: 1px solid var(--line); text-align: left; white-space: nowrap; }
+    th { color: var(--muted); font-size: 12px; }
+    td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
+
+    .status {
+      display: none;
+      padding: 24px;
+      margin-bottom: 18px;
+      color: var(--muted);
+      text-align: center;
+    }
+
+    .status.visible { display: block; }
+    footer { padding-top: 6px; color: var(--muted); font-size: 12px; line-height: 1.8; text-align: center; }
+    .station-source { display: block; }
+
+    @media (max-width: 980px) {
+      .grid-main, .grid-secondary { grid-template-columns: 1fr; }
+      .filters { grid-template-columns: repeat(3, 1fr); }
+      .filters button, .filters .download { width: 100%; }
+    }
+
+    @media (max-width: 680px) {
+      .page { padding-top: 22px; }
+      .hero { display: block; }
+      .data-note { margin-top: 14px; text-align: left; }
+      .filters { grid-template-columns: 1fr 1fr; }
+      .filters label:first-child { grid-column: 1 / -1; }
+      .daily-row { grid-template-columns: 1fr; gap: 8px; }
+      .city-weather-grid { grid-template-columns: repeat(2, minmax(122px, 1fr)); }
+      .chart-panel { padding: 18px 14px 10px; }
+      .panel-head { display: block; }
+      .panel-head p { margin-top: 5px; }
+    }
+
+    @media (max-width: 420px) {
+      .filters { grid-template-columns: 1fr; }
+      .filters label:first-child { grid-column: auto; }
+      .city-weather-grid { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+  <main class="page">
+    <header class="hero">
+      <div>
+        <p class="eyebrow">Business Hours Weather</p>
+        <h1>五城市營業時段天氣</h1>
+        <p class="subtitle">聚焦每日 10:00–22:00，快速比較臺北、新北、桃園、臺中與高雄的每日天氣與逐時降雨。</p>
+      </div>
+      <div class="data-note" id="dataNote">正在讀取資料…</div>
+    </header>
+
+    <section class="panel filters" aria-label="資料篩選">
+      <label>城市
+        <select id="cityFilter"><option value="all">全部城市</option></select>
+      </label>
+      <label>快速期間
+        <select id="rangePreset">
+          <option value="3">最近 3 天</option>
+          <option value="7" selected>最近 7 天</option>
+          <option value="14">最近 14 天</option>
+          <option value="30">最近 30 天</option>
+          <option value="month">本月</option>
+          <option value="custom">自訂期間</option>
+        </select>
+      </label>
+      <label>開始日期
+        <input id="startDate" type="date">
+      </label>
+      <label>結束日期
+        <input id="endDate" type="date">
+      </label>
+      <a class="download" href="data/weather-hourly.csv" download>下載原始 CSV</a>
+    </section>
+
+    <div class="panel status visible" id="status" role="status">資料載入中，請稍候…</div>
+
+    <section class="panel daily-summary" id="dailySummary" hidden>
+      <div class="panel-head"><h2>每日城市天氣摘要</h2><p>營業時段 10:00–22:00｜最新日期優先</p></div>
+      <div class="daily-summary-list" id="dailySummaryList"></div>
+    </section>
+
+    <section class="grid-main" id="mainCharts" hidden>
+      <article class="panel chart-panel">
+        <div class="panel-head"><h2>每日累積雨量</h2><p>單位：mm</p></div>
+        <div class="legend" id="lineLegend" aria-label="點擊城市名稱顯示或隱藏折線"></div>
+        <div class="chart" id="rainTrend" role="img" aria-label="各城市每日累積雨量折線圖"></div>
+      </article>
+    </section>
+
+    <section class="grid-secondary" id="secondaryCharts" hidden>
+      <article class="panel chart-panel">
+        <div class="panel-head"><h2>逐時降雨熱力圖</h2><p>日期 × 10:00–22:00｜依城市分區</p></div>
+        <div class="chart compact" id="rainHeatmap" role="img" aria-label="各城市逐日逐時雨量熱力圖"></div>
+      </article>
+      <article class="panel chart-panel">
+        <div class="panel-head"><h2>雨量最高日期</h2><p>依城市與日期彙總</p></div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>排名</th><th>日期</th><th>城市</th><th class="num">雨量 mm</th></tr></thead>
+            <tbody id="wettestTable"></tbody>
+          </table>
+        </div>
+      </article>
+    </section>
+
+    <footer>
+      資料來源：中央氣象署 CODiS 測站逐時觀測資料｜營業時段 10:00–22:00
+      <span class="station-source">測站：臺北（466920）・新北（466881）・新屋／桃園（467050）・臺中（467490）・高雄（467441）</span>
+    </footer>
+  </main>
+  <div class="tooltip" id="tooltip" role="tooltip"></div>
+
+  <script>
+    const parseDate = d3.utcParse("%Y-%m-%d");
+    const formatDate = d3.utcFormat("%Y-%m-%d");
+    const displayDate = d3.utcFormat("%Y/%m/%d");
+    const cityOrder = ["台北", "新北", "桃園", "台中", "高雄"];
+    const cityColors = new Map([
+      ["台北", "#2878d0"], ["新北", "#20a4c7"], ["桃園", "#e9872b"],
+      ["台中", "#3c9b72"], ["高雄", "#d34b55"]
+    ]);
+    const weekdays = ["一", "二", "三", "四", "五", "六", "日"];
+    const tooltip = d3.select("#tooltip");
+    let allRows = [];
+    let filteredRows = [];
+    let availableCities = [];
+    let activeCities = new Set();
+    let resizeTimer;
+
+    function showTooltip(event, html) {
+      tooltip.html(html).style("left", `${event.clientX}px`).style("top", `${event.clientY}px`).style("opacity", 1);
+    }
+    function hideTooltip() { tooltip.style("opacity", 0); }
+
+    function rowParser(d) {
+      return {
+        dateText: d.date,
+        date: parseDate(d.date),
+        hour: +d.hour,
+        city: d.city,
+        rainfall: Number.isFinite(+d.rainfall_mm) ? +d.rainfall_mm : 0,
+        rainy: +d.rainy || 0,
+        heavy: +d.heavy_rain || 0,
+        temp: d.temp_c === "" ? NaN : +d.temp_c,
+        sunshine: d.sunshine_hr === "" ? 0 : (+d.sunshine_hr || 0),
+        weather: d.weather || ""
+      };
+    }
+
+    d3.csv("data/weather-hourly.csv", rowParser).then(rows => {
+      allRows = rows.filter(d => d.date && d.hour >= 10 && d.hour <= 22);
+      if (!allRows.length) throw new Error("資料檔沒有可顯示的觀測值");
+
+      const minDate = d3.min(allRows, d => d.date);
+      const maxDate = d3.max(allRows, d => d.date);
+      const start7 = d3.utcDay.offset(maxDate, -6);
+      availableCities = cityOrder.filter(city => allRows.some(d => d.city === city));
+      activeCities = new Set(availableCities);
+
+      d3.select("#cityFilter").selectAll("option.city")
+        .data(availableCities).join("option").attr("class", "city").attr("value", d => d).text(d => d);
+
+      d3.select("#startDate").attr("min", formatDate(minDate)).attr("max", formatDate(maxDate)).property("value", formatDate(start7 < minDate ? minDate : start7));
+      d3.select("#endDate").attr("min", formatDate(minDate)).attr("max", formatDate(maxDate)).property("value", formatDate(maxDate));
+      d3.select("#dataNote").html(`<strong>${d3.format(",")(allRows.length)}</strong> 筆觀測<br>${displayDate(minDate)}–${displayDate(maxDate)}`);
+
+      d3.select("#cityFilter").on("change", () => {
+        const city = d3.select("#cityFilter").property("value");
+        activeCities = new Set(city === "all" ? availableCities : [city]);
+        updateDashboard();
+      });
+      d3.select("#rangePreset").on("change", () => {
+        const preset = d3.select("#rangePreset").property("value");
+        if (preset === "custom") return;
+        const start = preset === "month"
+          ? new Date(Date.UTC(maxDate.getUTCFullYear(), maxDate.getUTCMonth(), 1))
+          : d3.utcDay.offset(maxDate, -(+preset - 1));
+        d3.select("#startDate").property("value", formatDate(start < minDate ? minDate : start));
+        d3.select("#endDate").property("value", formatDate(maxDate));
+        updateDashboard();
+      });
+      d3.selectAll("#startDate, #endDate").on("change", () => {
+        d3.select("#rangePreset").property("value", "custom");
+        updateDashboard();
+      });
+
+      d3.select("#status").classed("visible", false);
+      d3.selectAll("#dailySummary, #mainCharts, #secondaryCharts").attr("hidden", null);
+      updateDashboard();
+
+      new ResizeObserver(() => {
+        clearTimeout(resizeTimer);
+        resizeTimer = setTimeout(drawAll, 120);
+      }).observe(document.querySelector(".page"));
+    }).catch(error => {
+      d3.select("#status").classed("visible", true).text(`無法載入資料：${error.message}`);
+      d3.select("#dataNote").text("資料載入失敗");
+    });
+
+    function updateDashboard() {
+      const city = d3.select("#cityFilter").property("value");
+      const start = parseDate(d3.select("#startDate").property("value"));
+      const end = parseDate(d3.select("#endDate").property("value"));
+      filteredRows = allRows.filter(d => d.date >= start && d.date <= end && (city === "all" || d.city === city));
+
+      if (!filteredRows.length) {
+        d3.select("#status").classed("visible", true).text("所選範圍沒有資料，請調整日期或城市。");
+        d3.selectAll("#dailySummary, #mainCharts, #secondaryCharts").attr("hidden", true);
+        return;
+      }
+
+      d3.select("#status").classed("visible", false);
+      d3.selectAll("#dailySummary, #mainCharts, #secondaryCharts").attr("hidden", null);
+      drawAll();
+    }
+
+    function drawAll() {
+      if (!filteredRows.length) return;
+      drawDailySummary();
+      drawRainTrend();
+      drawHeatmap();
+      drawWettestTable();
+    }
+
+    function baseSvg(selector, height, margin) {
+      const root = d3.select(selector);
+      root.selectAll("*").remove();
+      const width = Math.max(320, root.node().clientWidth || 640);
+      const svg = root.append("svg").attr("viewBox", `0 0 ${width} ${height}`).attr("aria-hidden", "true");
+      return {svg, width, height, innerWidth: width - margin.left - margin.right, innerHeight: height - margin.top - margin.bottom};
+    }
+
+    function summarizeDay(rows) {
+      const rainyHours = d3.sum(rows, d => d.rainy);
+      const heavyHours = d3.sum(rows, d => d.heavy);
+      const rainfall = d3.sum(rows, d => d.rainfall);
+      const maxRain = d3.max(rows, d => d.rainfall) || 0;
+      const sunshine = d3.sum(rows, d => d.sunshine);
+      let icon = "☁️", label = "陰天";
+      if (heavyHours > 0 || maxRain >= 15) { icon = "⛈️"; label = "強降雨"; }
+      else if (rainfall >= 10 || rainyHours >= 6) { icon = "🌧️"; label = "多雨"; }
+      else if (rainyHours > 0) { icon = "🌦️"; label = "有雨"; }
+      else if (sunshine >= 4) { icon = "☀️"; label = "晴朗"; }
+      else if (sunshine >= 1.5) { icon = "🌤️"; label = "晴時多雲"; }
+      return {icon, label, rainyHours, heavyHours, rainfall};
+    }
+
+    function drawDailySummary() {
+      const grouped = d3.rollups(filteredRows, summarizeDay, d => d.dateText, d => d.city)
+        .map(([dateText, cities]) => ({
+          dateText,
+          date: parseDate(dateText),
+          cities: cities.map(([city, summary]) => ({city, ...summary}))
+            .sort((a,b) => cityOrder.indexOf(a.city) - cityOrder.indexOf(b.city))
+        }))
+        .sort((a,b) => b.date - a.date);
+
+      const rows = d3.select("#dailySummaryList").selectAll("div.daily-row").data(grouped, d => d.dateText).join("div").attr("class", "daily-row");
+      rows.selectAll("*").remove();
+      rows.append("div").attr("class", "daily-date")
+        .html(d => `${d.dateText.replaceAll("-", "/")}<span>星期${weekdays[(d.date.getUTCDay() + 6) % 7]}</span>`);
+      rows.append("div").attr("class", "city-weather-grid").selectAll("div.weather-summary")
+        .data(d => d.cities).join("div").attr("class", "weather-summary")
+        .attr("title", d => `${d.city}｜${d.label}｜營業時段雨量 ${d3.format(".1f")(d.rainfall)} mm`)
+        .html(d => `<div class="weather-icon" aria-hidden="true">${d.icon}</div><div><div class="weather-city">${d.city}・${d.label}</div><div class="weather-detail">雨量 ${d3.format(".1f")(d.rainfall)} mm</div></div>`);
+    }
+
+    function drawRainTrend() {
+      const selector = "#rainTrend";
+      const margin = {top: 14, right: 16, bottom: 46, left: 58};
+      const {svg, width, height, innerWidth, innerHeight} = baseSvg(selector, 330, margin);
+      const allDaily = d3.rollups(filteredRows, v => d3.sum(v, d => d.rainfall), d => d.city, d => d.dateText)
+        .map(([city, values]) => ({city, values: values.map(([dateText, rainfall]) => ({dateText, date: parseDate(dateText), rainfall})).sort((a,b) => a.date - b.date)}))
+        .sort((a,b) => cityOrder.indexOf(a.city) - cityOrder.indexOf(b.city));
+      const daily = allDaily.filter(series => activeCities.has(series.city));
+      const xExtent = d3.extent(filteredRows, d => d.date);
+      const maxRain = d3.max(daily, s => d3.max(s.values, d => d.rainfall)) || 1;
+      const x = d3.scaleUtc().domain(xExtent).range([margin.left, width - margin.right]);
+      const y = d3.scaleLinear().domain([0, maxRain * 1.08]).nice().range([height - margin.bottom, margin.top]);
+      const tickCount = width < 500 ? 4 : 7;
+
+      svg.append("g").attr("class", "grid").attr("transform", `translate(${margin.left},0)`)
+        .call(d3.axisLeft(y).ticks(5).tickSize(-innerWidth).tickFormat(""));
+      svg.append("g").attr("class", "axis").attr("transform", `translate(0,${height - margin.bottom})`)
+        .call(d3.axisBottom(x).ticks(tickCount).tickFormat(d3.utcFormat("%m/%d")));
+      svg.append("g").attr("class", "axis").attr("transform", `translate(${margin.left},0)`).call(d3.axisLeft(y).ticks(5));
+      svg.append("text").attr("class", "axis-label").attr("x", margin.left).attr("y", 10).text("mm");
+
+      const line = d3.line().x(d => x(d.date)).y(d => y(d.rainfall)).curve(d3.curveMonotoneX);
+      svg.selectAll("path.series").data(daily).join("path")
+        .attr("class", "series").attr("fill", "none").attr("stroke", d => cityColors.get(d.city) || "#2878d0")
+        .attr("stroke-width", 2).attr("d", d => line(d.values));
+
+      const overlay = svg.append("rect").attr("x", margin.left).attr("y", margin.top).attr("width", innerWidth).attr("height", innerHeight)
+        .attr("fill", "transparent").style("cursor", "crosshair");
+      const guide = svg.append("line").attr("y1", margin.top).attr("y2", height - margin.bottom).attr("stroke", "#667085").attr("stroke-dasharray", "3,3").style("display", "none");
+      overlay.on("mousemove", event => {
+        const [mx] = d3.pointer(event);
+        const date = x.invert(Math.max(margin.left, Math.min(width - margin.right, mx)));
+        const lines = daily.map(series => {
+          const i = d3.bisector(d => d.date).center(series.values, date);
+          const point = series.values[i];
+          return point ? `<span style="color:${cityColors.get(series.city)}">●</span> ${series.city}：${d3.format(".1f")(point.rainfall)} mm` : "";
+        }).join("<br>");
+        guide.attr("x1", mx).attr("x2", mx).style("display", null);
+        showTooltip(event, `<strong>${displayDate(date)}</strong><br>${lines}`);
+      }).on("mouseleave", () => { guide.style("display", "none"); hideTooltip(); });
+
+      d3.select("#lineLegend").selectAll("button.legend-button").data(allDaily, d => d.city).join("button")
+        .attr("class", "legend-button").attr("type", "button").attr("aria-pressed", d => activeCities.has(d.city))
+        .attr("aria-label", d => `${activeCities.has(d.city) ? "隱藏" : "顯示"}${d.city}折線`)
+        .html(d => `<span class="legend-dot" style="background:${cityColors.get(d.city)}"></span>${d.city}`)
+        .on("click", (_, d) => {
+          if (activeCities.has(d.city) && activeCities.size === 1) return;
+          if (activeCities.has(d.city)) activeCities.delete(d.city); else activeCities.add(d.city);
+          drawRainTrend();
+        });
+    }
+
+    function drawHeatmap() {
+      const selector = "#rainHeatmap";
+      const root = d3.select(selector);
+      root.selectAll("*").remove();
+      const margin = {top: 34, right: 18, bottom: 52, left: 58};
+      const dates = [...new Set(filteredRows.map(d => d.dateText))].sort();
+      const cities = cityOrder.filter(city => filteredRows.some(d => d.city === city));
+      const hours = d3.range(10, 23);
+      const containerWidth = Math.max(320, root.node().clientWidth || 640);
+      const width = Math.max(containerWidth, dates.length * 42 + margin.left + margin.right);
+      const cityGridHeight = hours.length * 13;
+      const cityGap = 34;
+      const height = margin.top + cities.length * (cityGridHeight + cityGap) + margin.bottom;
+      const svg = root.append("svg").attr("viewBox", `0 0 ${width} ${height}`).style("width", `${width}px`).style("max-width", "none").attr("aria-hidden", "true");
+      const values = filteredRows.map(d => ({...d, intensity: d.rainfall > 0 ? d.rainfall : (d.rainy ? .1 : 0)}));
+      const x = d3.scaleBand().domain(dates).range([margin.left, width - margin.right]).padding(.08);
+      const maxRain = Math.max(1, d3.max(values, d => d.intensity) || 1);
+      const color = value => d3.interpolateBlues(Math.sqrt(value / maxRain));
+      const labelStep = Math.max(1, Math.ceil(dates.length / Math.max(4, Math.floor(containerWidth / 80))));
+      const tickDates = dates.filter((_, i) => i % labelStep === 0 || i === dates.length - 1);
+      svg.append("g").attr("class", "axis").attr("transform", `translate(0,${height - margin.bottom})`)
+        .call(d3.axisBottom(x).tickValues(tickDates).tickFormat(d => d.slice(5).replace("-", "/")))
+        .selectAll("text").attr("transform", "rotate(-42)").style("text-anchor", "end");
+      const legendWidth = 110;
+      const legendX = width - margin.right - legendWidth;
+      const gradient = svg.append("defs").append("linearGradient").attr("id", "hourly-rain-gradient").attr("x1", "0%").attr("x2", "100%");
+      gradient.selectAll("stop").data(d3.range(0, 1.01, .2)).join("stop").attr("offset", d => `${d * 100}%`).attr("stop-color", d => color(d * maxRain));
+      svg.append("rect").attr("x", legendX).attr("y", 4).attr("width", legendWidth).attr("height", 7).attr("rx", 3.5).attr("fill", "url(#hourly-rain-gradient)");
+      svg.append("text").attr("class", "axis-label").attr("x", legendX - 6).attr("y", 11).attr("text-anchor", "end").text("0 mm");
+      svg.append("text").attr("class", "axis-label").attr("x", width - margin.right + 6).attr("y", 11).text(`${d3.format(".1f")(maxRain)} mm`);
+
+      cities.forEach((city, cityIndex) => {
+        const top = margin.top + cityIndex * (cityGridHeight + cityGap) + 18;
+        const y = d3.scaleBand().domain(hours).range([top, top + cityGridHeight]).padding(.06);
+        svg.append("text").attr("x", margin.left).attr("y", top - 8).attr("fill", cityColors.get(city)).attr("font-size", 12).attr("font-weight", 700).text(city);
+        svg.append("g").attr("class", "axis").attr("transform", `translate(${margin.left},0)`)
+          .call(d3.axisLeft(y).tickFormat(d => `${d}:00`).tickSize(0)).call(g => g.select(".domain").remove());
+        svg.selectAll(`rect.cell-${cityIndex}`).data(values.filter(d => d.city === city)).join("rect")
+          .attr("class", `cell-${cityIndex}`).attr("x", d => x(d.dateText)).attr("y", d => y(d.hour))
+          .attr("width", x.bandwidth()).attr("height", y.bandwidth()).attr("rx", 1.5).attr("fill", d => color(d.intensity))
+          .on("mousemove", (event,d) => showTooltip(event, `<strong>${d.dateText.replaceAll("-", "/")}・${d.city} ${d.hour}:00</strong><br>${d.rainy && d.rainfall === 0 ? "雨跡" : `雨量 ${d3.format(".1f")(d.rainfall)} mm`}<br>${d.weather || "—"}・${Number.isFinite(d.temp) ? d3.format(".1f")(d.temp) + " °C" : "氣溫—"}`))
+          .on("mouseleave", hideTooltip)
+          .append("title").text(d => `${d.dateText} ${d.city} ${d.hour}:00，${d.rainy && d.rainfall === 0 ? "雨跡" : `雨量 ${d3.format(".1f")(d.rainfall)} mm`}`);
+      });
+    }
+
+    function drawWettestTable() {
+      const values = d3.rollups(filteredRows, v => ({rainfall: d3.sum(v, d => d.rainfall)}), d => d.city, d => d.dateText)
+        .flatMap(([city, dates]) => dates.map(([dateText, metrics]) => ({city, dateText, ...metrics})))
+        .sort((a,b) => d3.descending(a.rainfall, b.rainfall) || d3.ascending(a.dateText, b.dateText)).slice(0, 8);
+      d3.select("#wettestTable").selectAll("tr").data(values).join("tr").html((d,i) =>
+        `<td>${i + 1}</td><td>${d.dateText.replaceAll("-", "/")}</td><td>${d.city}</td><td class="num">${d3.format(".1f")(d.rainfall)}</td>`
+      );
+    }
+  </script>
+</body>
+</html>
+
