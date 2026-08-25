@@ -3,16 +3,16 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="description" content="Business-hours weather dashboard for five cities in Taiwan">
+  <meta name="description" content="Business-hours weather and official Taiwan calendar context for five cities">
   <meta property="og:type" content="website">
-  <meta property="og:title" content="Five-City Business Hours Weather">
-  <meta property="og:description" content="Hourly weather observations from 10:00 to 22:00 for Taipei, New Taipei, Taoyuan, Taichung, and Kaohsiung">
+  <meta property="og:title" content="Five-City Weather & Calendar Impact">
+  <meta property="og:description" content="Hourly rainfall with public holidays, long weekends, and calendar signals">
   <meta property="og:image" content="og.png">
   <meta name="twitter:card" content="summary_large_image">
   <meta name="twitter:title" content="Five-City Business Hours Weather">
   <meta name="twitter:description" content="Business-hours weather dashboard for five cities in Taiwan">
   <meta name="twitter:image" content="og.png">
-  <title>Five-City Business Hours Weather Dashboard</title>
+  <title>Five-City Weather & Calendar Impact Dashboard</title>
   <script src="https://cdn.jsdelivr.net/npm/d3@7.9.0/dist/d3.min.js"></script>
   <style>
     :root {
@@ -100,7 +100,7 @@
 
     .filters {
       display: grid;
-      grid-template-columns: repeat(4, minmax(140px, 1fr)) auto;
+      grid-template-columns: repeat(5, minmax(132px, 1fr)) auto;
       gap: 14px;
       align-items: end;
       padding: 18px;
@@ -146,6 +146,22 @@
       border-color: var(--navy);
       color: white;
     }
+
+    .download-group { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+    .download.secondary { background: white; border-color: var(--navy); color: var(--navy); }
+
+    .calendar-context { padding: 22px; margin-bottom: 18px; }
+    .context-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; margin-top: 14px; }
+    .context-card { padding: 14px; border: 1px solid var(--line); border-radius: 14px; background: #fbfcfe; }
+    .context-value { font-size: 26px; font-weight: 800; letter-spacing: -.03em; }
+    .context-label { margin-top: 4px; color: var(--muted); font-size: 12px; font-weight: 700; }
+    .context-detail { margin-top: 8px; color: var(--muted); font-size: 11px; line-height: 1.45; }
+
+    .calendar-chips { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 7px; }
+    .calendar-chip { display: inline-flex; align-items: center; min-height: 22px; padding: 3px 7px; border-radius: 999px; background: #edf2f7; color: #42526b; font-size: 10px; font-weight: 750; line-height: 1.2; }
+    .calendar-chip.holiday { background: #fff0d9; color: #995b16; }
+    .calendar-chip.long-weekend { background: #ddf3ee; color: #176b58; }
+    .calendar-chip.adjusted { background: #fce7f3; color: #9d174d; }
 
     .grid-main, .grid-secondary {
       display: grid;
@@ -252,6 +268,7 @@
     @media (max-width: 980px) {
       .grid-main, .grid-secondary { grid-template-columns: 1fr; }
       .filters { grid-template-columns: repeat(3, 1fr); }
+      .context-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
       .filters button, .filters .download { width: 100%; }
     }
 
@@ -263,6 +280,7 @@
       .filters label:first-child { grid-column: 1 / -1; }
       .daily-row { grid-template-columns: 1fr; gap: 8px; }
       .city-weather-grid { grid-template-columns: repeat(2, minmax(122px, 1fr)); }
+      .context-grid { grid-template-columns: 1fr 1fr; }
       .chart-panel { padding: 18px 14px 10px; }
       .panel-head { display: block; }
       .panel-head p { margin-top: 5px; }
@@ -272,6 +290,7 @@
       .filters { grid-template-columns: 1fr; }
       .filters label:first-child { grid-column: auto; }
       .city-weather-grid { grid-template-columns: 1fr; }
+      .context-grid, .download-group { grid-template-columns: 1fr; }
     }
   </style>
 </head>
@@ -279,9 +298,9 @@
   <main class="page">
     <header class="hero">
       <div>
-        <p class="eyebrow">Business Hours Weather</p>
-        <h1>Five-City Business Hours Weather</h1>
-        <p class="subtitle">Compare daily conditions and hourly rainfall from 10:00 to 22:00 across Taipei, New Taipei, Taoyuan, Taichung, and Kaohsiung.</p>
+        <p class="eyebrow">External Traffic Drivers</p>
+        <h1>Five-City Weather & Calendar Impact</h1>
+        <p class="subtitle">Compare business-hours rainfall with Taiwan public holidays, long weekends, observed holidays, and payday timing across Taipei, New Taipei, Taoyuan, Taichung, and Kaohsiung.</p>
       </div>
       <div class="data-note" id="dataNote">Loading data…</div>
     </header>
@@ -300,25 +319,44 @@
           <option value="custom">Custom range</option>
         </select>
       </label>
+      <label>Calendar signal
+        <select id="calendarFilter">
+          <option value="all">All days</option>
+          <option value="public_holiday">Public holidays</option>
+          <option value="long_weekend">Long weekends</option>
+          <option value="weekend">Weekends</option>
+          <option value="pre_post">Pre / post holiday</option>
+          <option value="adjusted_workday">Adjusted workdays</option>
+          <option value="payday_proxy">Payday proxy (25th)</option>
+        </select>
+      </label>
       <label>Start date
         <input id="startDate" type="date">
       </label>
       <label>End date
         <input id="endDate" type="date">
       </label>
-      <a class="download" href="data/weather-hourly.csv" download>Download source CSV</a>
+      <div class="download-group">
+        <a class="download" href="https://raw.githubusercontent.com/kent261/weather_summary/main/data/weather-hourly.csv" download>Weather CSV</a>
+        <a class="download secondary" href="data/calendar.csv" download>Calendar CSV</a>
+      </div>
     </section>
 
     <div class="panel status visible" id="status" role="status">Loading data…</div>
 
+    <section class="panel calendar-context" id="calendarContext" hidden>
+      <div class="panel-head"><h2>Calendar Context</h2><p>Official DGPA office calendar | Counts are unique dates</p></div>
+      <div class="context-grid" id="contextGrid"></div>
+    </section>
+
     <section class="panel daily-summary" id="dailySummary" hidden>
-      <div class="panel-head"><h2>Daily Weather Summary</h2><p>Business hours 10:00–22:00 | Newest first</p></div>
+      <div class="panel-head"><h2>Daily Weather & Calendar Summary</h2><p>Business hours 10:00–22:00 | Newest first</p></div>
       <div class="daily-summary-list" id="dailySummaryList"></div>
     </section>
 
     <section class="grid-main" id="mainCharts" hidden>
       <article class="panel chart-panel">
-        <div class="panel-head"><h2>Daily Rainfall</h2><p>Unit: mm</p></div>
+        <div class="panel-head"><h2>Daily Rainfall</h2><p>Unit: mm | Amber bands = public holidays</p></div>
         <div class="legend" id="lineLegend" aria-label="Select a city to show or hide its line"></div>
         <div class="chart" id="rainTrend" role="img" aria-label="Daily rainfall line chart by city"></div>
       </article>
@@ -341,7 +379,7 @@
     </section>
 
     <footer>
-      Source: Central Weather Administration CODiS hourly observations | Business hours 10:00–22:00
+      Sources: Central Weather Administration CODiS hourly observations · Directorate-General of Personnel Administration official office calendars | Business hours 10:00–22:00
       <span class="station-source">Stations: Taipei (466920) · New Taipei (466881) · Xinwu / Taoyuan (467050) · Taichung (467490) · Kaohsiung (467441)</span>
     </footer>
   </main>
@@ -367,6 +405,8 @@
     ]);
     const tooltip = d3.select("#tooltip");
     let allRows = [];
+    let calendarRows = [];
+    let calendarByDate = new Map();
     let filteredRows = [];
     let availableCities = [];
     let activeCities = new Set();
@@ -398,14 +438,54 @@
       };
     }
 
+    function calendarRowParser(d) {
+      const dateText = String(d.date ?? d["\ufeffdate"] ?? Object.values(d)[0] ?? "").replace(/^\ufeff/, "").trim();
+      const numericFields = [
+        "weekend", "is_day_off", "adjusted_workday", "public_holiday", "public_holiday_actual",
+        "observed_holiday", "long_weekend", "long_weekend_day", "long_weekend_length",
+        "pre_holiday", "post_holiday", "payday_proxy", "month_end"
+      ];
+      const out = { ...d, dateText, date: /^\d{4}-\d{2}-\d{2}$/.test(dateText) ? new Date(`${dateText}T00:00:00Z`) : null };
+      numericFields.forEach(field => { out[field] = +d[field] || 0; });
+      return out;
+    }
+
+    function calendarMatches(signal, c) {
+      if (signal === "all") return true;
+      if (!c) return false;
+      if (signal === "pre_post") return c.pre_holiday === 1 || c.post_holiday === 1;
+      return c[signal] === 1;
+    }
+
+    function calendarChips(c) {
+      if (!c) return '<span class="calendar-chip">Calendar unavailable</span>';
+      const chips = [];
+      if (c.public_holiday) chips.push(`<span class="calendar-chip holiday">${c.holiday_name || "Public holiday"}</span>`);
+      if (c.long_weekend) chips.push(`<span class="calendar-chip long-weekend">Long weekend · day ${c.long_weekend_day}/${c.long_weekend_length}</span>`);
+      if (c.adjusted_workday) chips.push('<span class="calendar-chip adjusted">Adjusted workday</span>');
+      else if (c.weekend && !c.public_holiday) chips.push('<span class="calendar-chip">Weekend</span>');
+      if (c.pre_holiday) chips.push('<span class="calendar-chip">Day before holiday break</span>');
+      if (c.post_holiday) chips.push('<span class="calendar-chip">Day after holiday break</span>');
+      if (c.payday_proxy) chips.push('<span class="calendar-chip">Payday proxy</span>');
+      return chips.slice(0, 3).join("");
+    }
+
     const dataVersion = new Date().toISOString().slice(0, 10);
     const dataUrl = `https://raw.githubusercontent.com/kent261/weather_summary/main/data/weather-hourly.csv?v=${dataVersion}`;
-    d3.csv(dataUrl, rowParser).then(rows => {
-      allRows = rows.filter(d => d.date && d.hour >= 10 && d.hour <= 22);
+    Promise.all([
+      d3.csv(dataUrl, rowParser),
+      d3.csv("data/calendar.csv", calendarRowParser)
+    ]).then(([weatherRows, loadedCalendarRows]) => {
+      allRows = weatherRows.filter(d => d.date && d.hour >= 10 && d.hour <= 22);
+      calendarRows = loadedCalendarRows.filter(d => d.date);
+      calendarByDate = new Map(calendarRows.map(d => [d.dateText, d]));
       if (!allRows.length) throw new Error("No valid observations were found in the data file.");
+      if (!calendarRows.length) throw new Error("No valid calendar rows were found in the calendar file.");
 
       const minDate = d3.min(allRows, d => d.date);
-      const maxDate = d3.max(allRows, d => d.date);
+      const weatherMaxDate = d3.max(allRows, d => d.date);
+      const calendarMaxDate = d3.max(calendarRows, d => d.date);
+      const maxDate = weatherMaxDate < calendarMaxDate ? weatherMaxDate : calendarMaxDate;
       const start7 = d3.utcDay.offset(maxDate, -6);
       availableCities = cityOrder.filter(city => allRows.some(d => d.city === city));
       activeCities = new Set(availableCities);
@@ -415,7 +495,7 @@
 
       d3.select("#startDate").attr("min", formatDate(minDate)).attr("max", formatDate(maxDate)).property("value", formatDate(start7 < minDate ? minDate : start7));
       d3.select("#endDate").attr("min", formatDate(minDate)).attr("max", formatDate(maxDate)).property("value", formatDate(maxDate));
-      d3.select("#dataNote").html(`<strong>${d3.format(",")(allRows.length)}</strong> observations<br>${displayDate(minDate)}–${displayDate(maxDate)}`);
+      d3.select("#dataNote").html(`<strong>${d3.format(",")(allRows.length)}</strong> weather observations<br>Calendar through ${displayDate(calendarMaxDate)}`);
 
       d3.select("#cityFilter").on("change", () => {
         const city = d3.select("#cityFilter").property("value");
@@ -432,13 +512,14 @@
         d3.select("#endDate").property("value", formatDate(maxDate));
         updateDashboard();
       });
+      d3.select("#calendarFilter").on("change", updateDashboard);
       d3.selectAll("#startDate, #endDate").on("change", () => {
         d3.select("#rangePreset").property("value", "custom");
         updateDashboard();
       });
 
       d3.select("#status").classed("visible", false);
-      d3.selectAll("#dailySummary, #mainCharts, #secondaryCharts").attr("hidden", null);
+      d3.selectAll("#calendarContext, #dailySummary, #mainCharts, #secondaryCharts").attr("hidden", null);
       updateDashboard();
 
       new ResizeObserver(() => {
@@ -452,27 +533,43 @@
 
     function updateDashboard() {
       const city = d3.select("#cityFilter").property("value");
+      const calendarSignal = d3.select("#calendarFilter").property("value");
       const start = parseDate(d3.select("#startDate").property("value"));
       const end = parseDate(d3.select("#endDate").property("value"));
-      filteredRows = allRows.filter(d => d.date >= start && d.date <= end && (city === "all" || d.city === city));
+      filteredRows = allRows.filter(d => d.date >= start && d.date <= end &&
+        (city === "all" || d.city === city) && calendarMatches(calendarSignal, calendarByDate.get(d.dateText)));
 
       if (!filteredRows.length) {
         d3.select("#status").classed("visible", true).text("No data is available for this selection. Adjust the date range or city.");
-        d3.selectAll("#dailySummary, #mainCharts, #secondaryCharts").attr("hidden", true);
+        d3.selectAll("#calendarContext, #dailySummary, #mainCharts, #secondaryCharts").attr("hidden", true);
         return;
       }
 
       d3.select("#status").classed("visible", false);
-      d3.selectAll("#dailySummary, #mainCharts, #secondaryCharts").attr("hidden", null);
+      d3.selectAll("#calendarContext, #dailySummary, #mainCharts, #secondaryCharts").attr("hidden", null);
       drawAll();
     }
 
     function drawAll() {
       if (!filteredRows.length) return;
+      drawCalendarContext();
       drawDailySummary();
       drawRainTrend();
       drawHeatmap();
       drawWettestTable();
+    }
+
+    function drawCalendarContext() {
+      const selectedDates = [...new Set(filteredRows.map(d => d.dateText))].map(dateText => calendarByDate.get(dateText)).filter(Boolean);
+      const holidayNames = [...new Set(selectedDates.filter(d => d.public_holiday && d.holiday_name).map(d => d.holiday_name.replace(" (Observed)", "")))];
+      const metrics = [
+        { value: d3.sum(selectedDates, d => d.public_holiday), label: "Public-holiday dates", detail: holidayNames.slice(0, 2).join(" · ") || "None in selection" },
+        { value: d3.sum(selectedDates, d => d.long_weekend), label: "Long-weekend dates", detail: `${new Set(selectedDates.filter(d => d.long_weekend).map(d => d.holiday_sequence_id)).size} distinct sequence(s)` },
+        { value: d3.sum(selectedDates, d => d.payday_proxy), label: "Payday proxy dates", detail: "25th of the month" },
+        { value: d3.sum(selectedDates, d => d.adjusted_workday), label: "Adjusted workdays", detail: "Weekend dates designated for work" },
+      ];
+      d3.select("#contextGrid").selectAll("div.context-card").data(metrics).join("div").attr("class", "context-card")
+        .html(d => `<div class="context-value">${d3.format(",")(d.value)}</div><div class="context-label">${d.label}</div><div class="context-detail">${d.detail}</div>`);
     }
 
     function baseSvg(selector, height, margin) {
@@ -503,6 +600,7 @@
         .map(([dateText, cities]) => ({
           dateText,
           date: parseDate(dateText),
+          calendar: calendarByDate.get(dateText),
           cities: cities.map(([city, summary]) => ({city, ...summary}))
             .sort((a,b) => cityOrder.indexOf(a.city) - cityOrder.indexOf(b.city))
         }))
@@ -511,7 +609,7 @@
       const rows = d3.select("#dailySummaryList").selectAll("div.daily-row").data(grouped, d => d.dateText).join("div").attr("class", "daily-row");
       rows.selectAll("*").remove();
       rows.append("div").attr("class", "daily-date")
-        .html(d => `${d.dateText.replaceAll("-", "/")}<span>${weekdays[(d.date.getUTCDay() + 6) % 7]}</span>`);
+        .html(d => `${d.dateText.replaceAll("-", "/")}<span>${weekdays[(d.date.getUTCDay() + 6) % 7]}</span><div class="calendar-chips">${calendarChips(d.calendar)}</div>`);
       rows.append("div").attr("class", "city-weather-grid").selectAll("div.weather-summary")
         .data(d => d.cities).join("div").attr("class", "weather-summary")
         .attr("title", d => `${cityLabels.get(d.city) || d.city} | ${d.label} | Business-hours rainfall ${d3.format(".1f")(d.rainfall)} mm`)
@@ -531,6 +629,15 @@
       const x = d3.scaleUtc().domain(xExtent).range([margin.left, width - margin.right]);
       const y = d3.scaleLinear().domain([0, maxRain * 1.08]).nice().range([height - margin.bottom, margin.top]);
       const tickCount = width < 500 ? 4 : 7;
+
+      const selectedDateCount = new Set(filteredRows.map(d => d.dateText)).size;
+      const bandWidth = Math.max(3, Math.min(24, innerWidth / Math.max(1, selectedDateCount) * .72));
+      const holidayMarkers = [...new Set(filteredRows.map(d => d.dateText))]
+        .map(dateText => calendarByDate.get(dateText)).filter(d => d && d.public_holiday);
+      svg.append("g").selectAll("rect.holiday-band").data(holidayMarkers).join("rect")
+        .attr("class", "holiday-band").attr("x", d => x(d.date) - bandWidth / 2).attr("y", margin.top)
+        .attr("width", bandWidth).attr("height", innerHeight).attr("fill", "#f5b95f").attr("opacity", .18)
+        .append("title").text(d => `${d.dateText}: ${d.holiday_name || "Public holiday"}`);
 
       svg.append("g").attr("class", "grid").attr("transform", `translate(${margin.left},0)`)
         .call(d3.axisLeft(y).ticks(5).tickSize(-innerWidth).tickFormat(""));
