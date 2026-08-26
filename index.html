@@ -159,6 +159,8 @@
 
     .calendar-chips { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 7px; }
     .calendar-chip { display: inline-flex; align-items: center; min-height: 22px; padding: 3px 7px; border-radius: 999px; background: #edf2f7; color: #42526b; font-size: 10px; font-weight: 750; line-height: 1.2; }
+    .calendar-chip.workday { background: #e8f1ff; color: #245b9e; }
+    .calendar-chip.day-off { background: #fff0d9; color: #995b16; }
     .calendar-chip.holiday { background: #fff0d9; color: #995b16; }
     .calendar-chip.long-weekend { background: #ddf3ee; color: #176b58; }
     .calendar-chip.adjusted { background: #fce7f3; color: #9d174d; }
@@ -460,6 +462,9 @@
     function calendarChips(c) {
       if (!c) return '<span class="calendar-chip">Calendar unavailable</span>';
       const chips = [];
+      chips.push(c.is_day_off
+        ? '<span class="calendar-chip day-off">Day off</span>'
+        : '<span class="calendar-chip workday">Workday</span>');
       if (c.public_holiday) chips.push(`<span class="calendar-chip holiday">${c.holiday_name || "Public holiday"}</span>`);
       if (c.long_weekend) chips.push(`<span class="calendar-chip long-weekend">Long weekend · day ${c.long_weekend_day}/${c.long_weekend_length}</span>`);
       if (c.adjusted_workday) chips.push('<span class="calendar-chip adjusted">Adjusted workday</span>');
@@ -467,7 +472,7 @@
       if (c.pre_holiday) chips.push('<span class="calendar-chip">Day before holiday break</span>');
       if (c.post_holiday) chips.push('<span class="calendar-chip">Day after holiday break</span>');
       if (c.payday_proxy) chips.push('<span class="calendar-chip">Payday proxy</span>');
-      return chips.slice(0, 3).join("");
+      return chips.slice(0, 4).join("");
     }
 
     const dataVersion = new Date().toISOString().slice(0, 10);
