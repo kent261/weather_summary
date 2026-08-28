@@ -1,0 +1,156 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Official event details and Event Pressure inputs for five Taiwan cities">
+  <title>Five-City Event Details</title>
+  <script src="https://cdn.jsdelivr.net/npm/d3@7.9.0/dist/d3.min.js"></script>
+  <style>
+    :root { color-scheme: light; --ink:#14213d; --muted:#667085; --surface:#fff; --canvas:#f4f7fb; --line:#dfe6ef; --navy:#183153; --blue:#2878d0; --orange:#e9872b; --red:#d34b55; --shadow:0 12px 34px rgba(20,33,61,.08); }
+    * { box-sizing:border-box; }
+    body { margin:0; color:var(--ink); background:radial-gradient(circle at 90% 5%,rgba(40,120,208,.10),transparent 28rem),var(--canvas); font-family:Inter,"Noto Sans TC","PingFang TC","Microsoft JhengHei",system-ui,sans-serif; }
+    button,input,select { font:inherit; }
+    .page { width:min(1440px,100%); margin:0 auto; padding:32px clamp(16px,3vw,44px) 56px; }
+    .hero { display:flex; justify-content:space-between; align-items:flex-end; gap:24px; margin-bottom:24px; }
+    .eyebrow { margin:0 0 8px; color:var(--blue); font-size:13px; font-weight:800; letter-spacing:.12em; text-transform:uppercase; }
+    h1 { margin:0; font-size:clamp(30px,4vw,50px); line-height:1.08; letter-spacing:-.035em; }
+    .subtitle { max-width:780px; margin:12px 0 0; color:var(--muted); line-height:1.7; }
+    .actions { display:flex; flex-wrap:wrap; gap:8px; justify-content:flex-end; }
+    .action { min-height:42px; display:inline-flex; align-items:center; justify-content:center; padding:9px 15px; border:1px solid var(--navy); border-radius:10px; background:var(--navy); color:#fff; font-weight:750; text-decoration:none; }
+    .action.secondary { background:#fff; color:var(--navy); }
+    .panel { background:var(--surface); border:1px solid var(--line); border-radius:18px; box-shadow:var(--shadow); }
+    .filters { display:grid; grid-template-columns:repeat(4,minmax(150px,1fr)); gap:14px; padding:18px; margin-bottom:18px; }
+    label { display:grid; gap:7px; color:var(--muted); font-size:13px; font-weight:700; }
+    input,select { width:100%; min-height:42px; padding:9px 11px; border:1px solid var(--line); border-radius:10px; background:#fff; color:var(--ink); }
+    input:focus-visible,select:focus-visible,.action:focus-visible { outline:3px solid rgba(40,120,208,.22); outline-offset:2px; }
+    .metrics { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:12px; margin-bottom:18px; }
+    .metric { padding:16px; }
+    .metric-value { font-size:28px; font-weight:850; letter-spacing:-.03em; }
+    .metric-label { margin-top:4px; color:var(--muted); font-size:12px; font-weight:750; }
+    .table-panel { padding:22px; }
+    .panel-head { display:flex; justify-content:space-between; gap:16px; align-items:baseline; margin-bottom:12px; }
+    .panel-head h2 { margin:0; font-size:18px; }
+    .panel-head p { margin:0; color:var(--muted); font-size:12px; }
+    .table-wrap { overflow:auto; }
+    table { width:100%; border-collapse:collapse; font-size:13px; }
+    th,td { padding:12px 10px; border-bottom:1px solid var(--line); text-align:left; vertical-align:top; }
+    th { position:sticky; top:0; z-index:1; background:#f8fafc; color:var(--muted); font-size:12px; white-space:nowrap; }
+    td.num { text-align:right; font-variant-numeric:tabular-nums; }
+    .event-name { min-width:250px; font-weight:780; line-height:1.45; }
+    .address { min-width:220px; color:#516178; line-height:1.45; }
+    .date-range { min-width:155px; white-space:nowrap; }
+    .chip { display:inline-flex; align-items:center; min-height:24px; padding:3px 8px; border-radius:999px; background:#e8f1ff; color:#245b9e; font-size:11px; font-weight:750; white-space:nowrap; }
+    .chip.major { background:#fde2e2; color:#a61b1b; }
+    .source-link { color:var(--blue); font-weight:750; text-decoration:none; white-space:nowrap; }
+    .source-link:hover { text-decoration:underline; }
+    .status { display:none; padding:24px; margin-bottom:18px; color:var(--muted); text-align:center; }
+    .status.visible { display:block; }
+    .coverage { margin:14px 0 0; color:var(--muted); font-size:12px; line-height:1.6; }
+    footer { padding-top:18px; color:var(--muted); font-size:12px; line-height:1.7; text-align:center; }
+    @media (max-width:900px) { .filters,.metrics { grid-template-columns:repeat(2,minmax(0,1fr)); } .hero { align-items:flex-start; } }
+    @media (max-width:620px) { .hero { display:block; } .actions { justify-content:flex-start; margin-top:16px; } .filters,.metrics { grid-template-columns:1fr; } .table-panel { padding:16px 10px; } .panel-head { display:block; } .panel-head p { margin-top:5px; } }
+  </style>
+</head>
+<body>
+  <main class="page">
+    <header class="hero">
+      <div>
+        <p class="eyebrow">External Traffic Drivers</p>
+        <h1>Five-City Event Details</h1>
+        <p class="subtitle">Explore the official events behind the Event Pressure score. Date filters include any event that overlaps the selected period.</p>
+      </div>
+      <div class="actions">
+        <a class="action secondary" href="index.html">← Back to dashboard</a>
+        <a class="action" href="data/event-details.csv" download>Download event details</a>
+      </div>
+    </header>
+
+    <section class="panel filters" aria-label="Event detail filters">
+      <label>Search event
+        <input id="searchFilter" type="search" placeholder="Name, address, or district">
+      </label>
+      <label>City
+        <select id="cityFilter"><option value="all">All cities</option></select>
+      </label>
+      <label>Category
+        <select id="categoryFilter"><option value="all">All categories</option></select>
+      </label>
+      <label>Event type
+        <select id="majorFilter"><option value="all">All events</option><option value="major">Major events only</option><option value="standard">Standard events only</option></select>
+      </label>
+      <label>Start date
+        <input id="startDate" type="date">
+      </label>
+      <label>End date
+        <input id="endDate" type="date">
+      </label>
+      <label>Minimum score
+        <select id="scoreFilter"><option value="0">Any score</option><option value="2">2.0+</option><option value="3.5">3.5+</option><option value="4">4.0+</option></select>
+      </label>
+      <label>Sort by
+        <select id="sortFilter"><option value="start">Start date</option><option value="score">Pressure score</option><option value="updated">Source update</option></select>
+      </label>
+    </section>
+
+    <div class="panel status visible" id="status" role="status">Loading event details…</div>
+    <section class="metrics" id="metrics" hidden></section>
+    <section class="panel table-panel" id="results" hidden>
+      <div class="panel-head"><h2>Matching Events</h2><p id="resultNote"></p></div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Event</th><th>City</th><th>Date</th><th>Category</th><th>Score</th><th>Venue / address</th><th>Source</th></tr></thead>
+          <tbody id="eventTable"></tbody>
+        </table>
+      </div>
+      <p class="coverage">Coverage note: this is the Tourism Administration's current official snapshot, not a complete historical archive. Missing records do not prove that no event occurred.</p>
+    </section>
+    <footer>Source: Tourism Administration official national event database · Event Pressure v1 does not fabricate unpublished attendance.</footer>
+  </main>
+  <script>
+    const parseDate = d3.utcParse("%Y-%m-%d");
+    const cityOrder = ["台北","新北","桃園","台中","高雄"];
+    const cityLabels = new Map([["台北","Taipei"],["新北","New Taipei"],["桃園","Taoyuan"],["台中","Taichung"],["高雄","Kaohsiung"]]);
+    let allEvents = [];
+
+    function escapeHtml(value) { return String(value || "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"})[c]); }
+    function safeUrl(value) { try { const url = new URL(value); return ["http:","https:"].includes(url.protocol) ? url.href : ""; } catch { return ""; } }
+    function rowParser(d) {
+      const eventId = String(d.event_id ?? d["\ufeffevent_id"] ?? Object.values(d)[0] ?? "").replace(/^\ufeff/, "").trim();
+      return { ...d, event_id:eventId, start:parseDate(d.start_date), end:parseDate(d.end_date), duration_days:+d.duration_days||0, daily_pressure_score:+d.daily_pressure_score||0, major_event:+d.major_event||0 };
+    }
+
+    d3.csv("data/event-details.csv", rowParser).then(rows => {
+      allEvents = rows.filter(d => d.event_id && d.start && d.end);
+      if (!allEvents.length) throw new Error("No valid event detail rows were found.");
+      const minDate = d3.min(allEvents,d=>d.start), maxDate = d3.max(allEvents,d=>d.end);
+      d3.select("#startDate").attr("min",d3.utcFormat("%Y-%m-%d")(minDate)).attr("max",d3.utcFormat("%Y-%m-%d")(maxDate)).property("value",d3.utcFormat("%Y-%m-%d")(minDate));
+      d3.select("#endDate").attr("min",d3.utcFormat("%Y-%m-%d")(minDate)).attr("max",d3.utcFormat("%Y-%m-%d")(maxDate)).property("value",d3.utcFormat("%Y-%m-%d")(maxDate));
+      d3.select("#cityFilter").selectAll("option.city").data(cityOrder.filter(c=>allEvents.some(d=>d.city===c))).join("option").attr("class","city").attr("value",d=>d).text(d=>cityLabels.get(d)||d);
+      d3.select("#categoryFilter").selectAll("option.category").data([...new Set(allEvents.map(d=>d.category))].sort()).join("option").attr("class","category").attr("value",d=>d).text(d=>d);
+      d3.selectAll("#searchFilter,#cityFilter,#categoryFilter,#majorFilter,#startDate,#endDate,#scoreFilter,#sortFilter").on("input change",update);
+      d3.select("#status").classed("visible",false);
+      d3.selectAll("#metrics,#results").attr("hidden",null);
+      update();
+    }).catch(error => d3.select("#status").classed("visible",true).text(`Unable to load event details: ${error.message}`));
+
+    function update() {
+      const query = d3.select("#searchFilter").property("value").trim().toLocaleLowerCase("zh-Hant");
+      const city = d3.select("#cityFilter").property("value"), category = d3.select("#categoryFilter").property("value"), major = d3.select("#majorFilter").property("value");
+      const start = parseDate(d3.select("#startDate").property("value")), end = parseDate(d3.select("#endDate").property("value")), minScore = +d3.select("#scoreFilter").property("value");
+      const sort = d3.select("#sortFilter").property("value");
+      let rows = allEvents.filter(d => d.start <= end && d.end >= start && (city === "all" || d.city === city) && (category === "all" || d.category === category) && (major === "all" || (major === "major" ? d.major_event : !d.major_event)) && d.daily_pressure_score >= minScore && (!query || `${d.event_name} ${d.venue_address} ${d.town}`.toLocaleLowerCase("zh-Hant").includes(query)));
+      rows.sort(sort === "score" ? (a,b)=>d3.descending(a.daily_pressure_score,b.daily_pressure_score)||d3.ascending(a.start,b.start) : sort === "updated" ? (a,b)=>d3.descending(a.source_update_time,b.source_update_time) : (a,b)=>d3.ascending(a.start,b.start)||d3.descending(a.daily_pressure_score,b.daily_pressure_score));
+      const eventDays = d3.sum(rows,d=>d.duration_days), maxScore = d3.max(rows,d=>d.daily_pressure_score)||0;
+      const metrics = [{value:d3.format(",")(rows.length),label:"Matching events"},{value:d3.format(",")(d3.sum(rows,d=>d.major_event)),label:"Major events"},{value:d3.format(",")(eventDays),label:"Event-days"},{value:d3.format(".2f")(maxScore),label:"Highest event score"}];
+      d3.select("#metrics").selectAll("article.metric").data(metrics).join("article").attr("class","panel metric").html(d=>`<div class="metric-value">${d.value}</div><div class="metric-label">${d.label}</div>`);
+      d3.select("#resultNote").text(`${d3.format(",")(rows.length)} event${rows.length===1?"":"s"} · official snapshot`);
+      d3.select("#eventTable").selectAll("tr").data(rows,d=>d.event_id).join("tr").html(d=>{
+        const url=safeUrl(d.official_url), date=d.start_date===d.end_date?d.start_date:`${d.start_date} → ${d.end_date}`;
+        return `<td class="event-name">${escapeHtml(d.event_name)}${d.major_event?'<div><span class="chip major">Major event</span></div>':""}</td><td>${escapeHtml(cityLabels.get(d.city)||d.city)}<br><span class="chip">${escapeHtml(d.town)}</span></td><td class="date-range">${escapeHtml(date)}<br>${d.duration_days} day${d.duration_days===1?"":"s"}</td><td>${escapeHtml(d.category)}</td><td class="num"><strong>${d3.format(".2f")(d.daily_pressure_score)}</strong></td><td class="address">${escapeHtml(d.venue_address||"—")}</td><td>${url?`<a class="source-link" href="${escapeHtml(url)}" target="_blank" rel="noopener noreferrer">Official ↗</a>`:"—"}</td>`;
+      });
+    }
+  </script>
+</body>
+</html>
+
