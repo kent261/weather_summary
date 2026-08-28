@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="description" content="Business-hours weather and official Taiwan calendar context for five cities">
+  <meta name="description" content="Business-hours weather, official Taiwan calendar, and event pressure context for five cities">
   <meta property="og:type" content="website">
   <meta property="og:title" content="Five-City Weather & Calendar Impact">
   <meta property="og:description" content="Hourly rainfall with public holidays, long weekends, and calendar signals">
@@ -100,7 +100,7 @@
 
     .filters {
       display: grid;
-      grid-template-columns: repeat(5, minmax(132px, 1fr)) auto;
+      grid-template-columns: repeat(4, minmax(145px, 1fr));
       gap: 14px;
       align-items: end;
       padding: 18px;
@@ -147,7 +147,7 @@
       color: white;
     }
 
-    .download-group { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+    .download-group { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; grid-column: span 2; }
     .download.secondary { background: white; border-color: var(--navy); color: var(--navy); }
 
     .calendar-context { padding: 22px; margin-bottom: 18px; }
@@ -164,6 +164,10 @@
     .calendar-chip.holiday { background: #fff0d9; color: #995b16; }
     .calendar-chip.long-weekend { background: #ddf3ee; color: #176b58; }
     .calendar-chip.adjusted { background: #fce7f3; color: #9d174d; }
+    .calendar-chip.event-low { background: #e8f1ff; color: #245b9e; }
+    .calendar-chip.event-medium { background: #fff0d9; color: #995b16; }
+    .calendar-chip.event-high { background: #fde2e2; color: #a61b1b; }
+    .event-detail { margin-top: 4px; color: #516178; font-size: 10px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 
     .grid-main, .grid-secondary {
       display: grid;
@@ -301,8 +305,8 @@
     <header class="hero">
       <div>
         <p class="eyebrow">External Traffic Drivers</p>
-        <h1>Five-City Weather & Calendar Impact</h1>
-        <p class="subtitle">Compare business-hours rainfall with Taiwan public holidays, long weekends, observed holidays, and payday timing across Taipei, New Taipei, Taoyuan, Taichung, and Kaohsiung.</p>
+        <h1>Five-City Weather, Calendar & Event Impact</h1>
+        <p class="subtitle">Compare business-hours rainfall with Taiwan public holidays, long weekends, payday timing, and official event pressure across Taipei, New Taipei, Taoyuan, Taichung, and Kaohsiung.</p>
       </div>
       <div class="data-note" id="dataNote">Loading data…</div>
     </header>
@@ -345,6 +349,15 @@
           <option value="payday_proxy">Payday proxy (25th)</option>
         </select>
       </label>
+      <label>Event pressure
+        <select id="eventFilter">
+          <option value="all">All event levels</option>
+          <option value="any">Any official event</option>
+          <option value="major">Major event</option>
+          <option value="high">High pressure</option>
+          <option value="medium_plus">Medium or higher</option>
+        </select>
+      </label>
       <label>Start date
         <input id="startDate" type="date">
       </label>
@@ -354,6 +367,7 @@
       <div class="download-group">
         <a class="download" href="https://raw.githubusercontent.com/kent261/weather_summary/main/data/weather-hourly.csv" download>Weather CSV</a>
         <a class="download secondary" href="data/calendar.csv" download>Calendar CSV</a>
+        <a class="download secondary" href="data/event-calendar.csv" download>Event CSV</a>
       </div>
     </section>
 
@@ -364,8 +378,13 @@
       <div class="context-grid" id="contextGrid"></div>
     </section>
 
+    <section class="panel calendar-context" id="eventContext" hidden>
+      <div class="panel-head"><h2>Event Context</h2><p>Tourism Administration official event snapshot | Counts are unique date × city records</p></div>
+      <div class="context-grid" id="eventContextGrid"></div>
+    </section>
+
     <section class="panel daily-summary" id="dailySummary" hidden>
-      <div class="panel-head"><h2>Daily Weather & Calendar Summary</h2><p>Business hours 10:00–22:00 | Newest first</p></div>
+      <div class="panel-head"><h2>Daily Weather, Calendar & Event Summary</h2><p>Business hours 10:00–22:00 | Newest first</p></div>
       <div class="daily-summary-list" id="dailySummaryList"></div>
     </section>
 
@@ -394,7 +413,7 @@
     </section>
 
     <footer>
-      Sources: Central Weather Administration CODiS hourly observations · Directorate-General of Personnel Administration official office calendars | Business hours 10:00–22:00
+      Sources: Central Weather Administration CODiS hourly observations · Directorate-General of Personnel Administration official office calendars · Tourism Administration official event database | Business hours 10:00–22:00
       <span class="station-source">Stations: Taipei (466920) · New Taipei (466881) · Xinwu / Taoyuan (467050) · Taichung (467490) · Kaohsiung (467441)</span>
     </footer>
   </main>
@@ -422,6 +441,8 @@
     let allRows = [];
     let calendarRows = [];
     let calendarByDate = new Map();
+    let eventRows = [];
+    let eventByDateCity = new Map();
     let filteredRows = [];
     let availableCities = [];
     let activeCities = new Set();
@@ -465,6 +486,41 @@
       return out;
     }
 
+    function eventRowParser(d) {
+      const dateText = String(d.date ?? d["\ufeffdate"] ?? Object.values(d)[0] ?? "").replace(/^\ufeff/, "").trim();
+      return {
+        ...d,
+        dateText,
+        date: /^\d{4}-\d{2}-\d{2}$/.test(dateText) ? new Date(`${dateText}T00:00:00Z`) : null,
+        event_count: +d.event_count || 0,
+        major_event_count: +d.major_event_count || 0,
+        event_pressure_score: +d.event_pressure_score || 0,
+        has_official_event_record: +d.has_official_event_record || 0,
+      };
+    }
+
+    function eventMatches(signal, e) {
+      if (signal === "all") return true;
+      if (!e) return false;
+      if (signal === "any") return e.event_count > 0;
+      if (signal === "major") return e.major_event_count > 0;
+      if (signal === "high") return e.event_pressure_level === "High";
+      if (signal === "medium_plus") return e.event_pressure_level === "High" || e.event_pressure_level === "Medium";
+      return true;
+    }
+
+    function escapeHtml(value) {
+      return String(value || "").replace(/[&<>"']/g, char => ({"&":"&amp;", "<":"&lt;", ">":"&gt;", '"':"&quot;", "'":"&#39;"})[char]);
+    }
+
+    function eventChips(e) {
+      if (!e || !e.event_count) return '<span class="calendar-chip">No official event record</span>';
+      const level = String(e.event_pressure_level || "Low").toLowerCase();
+      const chips = [`<span class="calendar-chip event-${level}">${e.event_count} event${e.event_count === 1 ? "" : "s"} · ${escapeHtml(e.event_pressure_level)}</span>`];
+      if (e.major_event_count) chips.push(`<span class="calendar-chip event-high">${e.major_event_count} major</span>`);
+      return chips.join("");
+    }
+
     function calendarMatches(signal, c) {
       if (signal === "all") return true;
       if (!c) return false;
@@ -492,13 +548,17 @@
     const dataUrl = `https://raw.githubusercontent.com/kent261/weather_summary/main/data/weather-hourly.csv?v=${dataVersion}`;
     Promise.all([
       d3.csv(dataUrl, rowParser),
-      d3.csv("data/calendar.csv", calendarRowParser)
-    ]).then(([weatherRows, loadedCalendarRows]) => {
+      d3.csv("data/calendar.csv", calendarRowParser),
+      d3.csv("data/event-calendar.csv", eventRowParser)
+    ]).then(([weatherRows, loadedCalendarRows, loadedEventRows]) => {
       allRows = weatherRows.filter(d => d.date && d.hour >= 10 && d.hour <= 22);
       calendarRows = loadedCalendarRows.filter(d => d.date);
       calendarByDate = new Map(calendarRows.map(d => [d.dateText, d]));
+      eventRows = loadedEventRows.filter(d => d.date && d.city);
+      eventByDateCity = new Map(eventRows.map(d => [`${d.dateText}|${d.city}`, d]));
       if (!allRows.length) throw new Error("No valid observations were found in the data file.");
       if (!calendarRows.length) throw new Error("No valid calendar rows were found in the calendar file.");
+      if (!eventRows.length) throw new Error("No valid event rows were found in the event file.");
 
       const minDate = d3.min(allRows, d => d.date);
       const weatherMaxDate = d3.max(allRows, d => d.date);
@@ -513,7 +573,8 @@
 
       d3.select("#startDate").attr("min", formatDate(minDate)).attr("max", formatDate(maxDate)).property("value", formatDate(start7 < minDate ? minDate : start7));
       d3.select("#endDate").attr("min", formatDate(minDate)).attr("max", formatDate(maxDate)).property("value", formatDate(maxDate));
-      d3.select("#dataNote").html(`<strong>${d3.format(",")(allRows.length)}</strong> weather observations<br>Calendar through ${displayDate(calendarMaxDate)}`);
+      const eventSnapshot = d3.max(eventRows, d => d.source_snapshot_date || "") || "Unknown";
+      d3.select("#dataNote").html(`<strong>${d3.format(",")(allRows.length)}</strong> weather observations<br>Calendar through ${displayDate(calendarMaxDate)} · Events snapshot ${escapeHtml(eventSnapshot.replaceAll("-", "/"))}`);
 
       d3.select("#cityFilter").on("change", () => {
         const city = d3.select("#cityFilter").property("value");
@@ -531,6 +592,7 @@
         updateDashboard();
       });
       d3.select("#calendarFilter").on("change", updateDashboard);
+      d3.select("#eventFilter").on("change", updateDashboard);
       d3.select("#weekdayFilter").on("change", updateDashboard);
       d3.selectAll("#startDate, #endDate").on("change", () => {
         d3.select("#rangePreset").property("value", "custom");
@@ -538,7 +600,7 @@
       });
 
       d3.select("#status").classed("visible", false);
-      d3.selectAll("#calendarContext, #dailySummary, #mainCharts, #secondaryCharts").attr("hidden", null);
+      d3.selectAll("#calendarContext, #eventContext, #dailySummary, #mainCharts, #secondaryCharts").attr("hidden", null);
       updateDashboard();
 
       new ResizeObserver(() => {
@@ -553,28 +615,31 @@
     function updateDashboard() {
       const city = d3.select("#cityFilter").property("value");
       const calendarSignal = d3.select("#calendarFilter").property("value");
+      const eventSignal = d3.select("#eventFilter").property("value");
       const weekday = d3.select("#weekdayFilter").property("value");
       const start = parseDate(d3.select("#startDate").property("value"));
       const end = parseDate(d3.select("#endDate").property("value"));
       filteredRows = allRows.filter(d => d.date >= start && d.date <= end &&
         (city === "all" || d.city === city) &&
         (weekday === "all" || d.date.getUTCDay() === +weekday) &&
-        calendarMatches(calendarSignal, calendarByDate.get(d.dateText)));
+        calendarMatches(calendarSignal, calendarByDate.get(d.dateText)) &&
+        eventMatches(eventSignal, eventByDateCity.get(`${d.dateText}|${d.city}`)));
 
       if (!filteredRows.length) {
-        d3.select("#status").classed("visible", true).text("No data is available for this selection. Adjust the date range, weekday, city, or calendar signal.");
-        d3.selectAll("#calendarContext, #dailySummary, #mainCharts, #secondaryCharts").attr("hidden", true);
+        d3.select("#status").classed("visible", true).text("No data is available for this selection. Adjust the date range, weekday, city, calendar signal, or event pressure.");
+        d3.selectAll("#calendarContext, #eventContext, #dailySummary, #mainCharts, #secondaryCharts").attr("hidden", true);
         return;
       }
 
       d3.select("#status").classed("visible", false);
-      d3.selectAll("#calendarContext, #dailySummary, #mainCharts, #secondaryCharts").attr("hidden", null);
+      d3.selectAll("#calendarContext, #eventContext, #dailySummary, #mainCharts, #secondaryCharts").attr("hidden", null);
       drawAll();
     }
 
     function drawAll() {
       if (!filteredRows.length) return;
       drawCalendarContext();
+      drawEventContext();
       drawDailySummary();
       drawRainTrend();
       drawHeatmap();
@@ -592,6 +657,21 @@
       ];
       d3.select("#contextGrid").selectAll("div.context-card").data(metrics).join("div").attr("class", "context-card")
         .html(d => `<div class="context-value">${d3.format(",")(d.value)}</div><div class="context-label">${d.label}</div><div class="context-detail">${d.detail}</div>`);
+    }
+
+    function drawEventContext() {
+      const selected = [...new Set(filteredRows.map(d => `${d.dateText}|${d.city}`))]
+        .map(key => eventByDateCity.get(key)).filter(Boolean);
+      const withEvents = selected.filter(d => d.event_count > 0);
+      const top = d3.greatest(withEvents, d => d.event_pressure_score);
+      const metrics = [
+        { value: withEvents.length, label: "Event city-dates", detail: "Official records in this selection" },
+        { value: selected.filter(d => d.major_event_count > 0).length, label: "Major-event city-dates", detail: "Keyword or major-venue signal" },
+        { value: selected.filter(d => d.event_pressure_level === "High").length, label: "High-pressure city-dates", detail: "Score ≥8 or at least two major events" },
+        { value: top ? d3.format(".2f")(top.event_pressure_score) : "0.00", label: "Peak pressure score", detail: top ? `${escapeHtml(top.dateText)} · ${escapeHtml(cityLabels.get(top.city) || top.city)} · ${escapeHtml(top.top_event_name)}` : "No official event record" },
+      ];
+      d3.select("#eventContextGrid").selectAll("div.context-card").data(metrics).join("div").attr("class", "context-card")
+        .html(d => `<div class="context-value">${d.value}</div><div class="context-label">${d.label}</div><div class="context-detail">${d.detail}</div>`);
     }
 
     function baseSvg(selector, height, margin) {
@@ -623,7 +703,7 @@
           dateText,
           date: parseDate(dateText),
           calendar: calendarByDate.get(dateText),
-          cities: cities.map(([city, summary]) => ({city, ...summary}))
+          cities: cities.map(([city, summary]) => ({city, ...summary, event: eventByDateCity.get(`${dateText}|${city}`)}))
             .sort((a,b) => cityOrder.indexOf(a.city) - cityOrder.indexOf(b.city))
         }))
         .sort((a,b) => b.date - a.date);
@@ -634,8 +714,8 @@
         .html(d => `${d.dateText.replaceAll("-", "/")}<span>${weekdays[(d.date.getUTCDay() + 6) % 7]}</span><div class="calendar-chips">${calendarChips(d.calendar)}</div>`);
       rows.append("div").attr("class", "city-weather-grid").selectAll("div.weather-summary")
         .data(d => d.cities).join("div").attr("class", "weather-summary")
-        .attr("title", d => `${cityLabels.get(d.city) || d.city} | ${d.label} | Business-hours rainfall ${d3.format(".1f")(d.rainfall)} mm`)
-        .html(d => `<div class="weather-icon" aria-hidden="true">${d.icon}</div><div><div class="weather-city">${cityLabels.get(d.city) || d.city} · ${d.label}</div><div class="weather-detail">Rainfall ${d3.format(".1f")(d.rainfall)} mm</div></div>`);
+        .attr("title", d => `${cityLabels.get(d.city) || d.city} | ${d.label} | Business-hours rainfall ${d3.format(".1f")(d.rainfall)} mm${d.event?.top_event_name ? ` | Top event: ${d.event.top_event_name}` : ""}`)
+        .html(d => `<div class="weather-icon" aria-hidden="true">${d.icon}</div><div><div class="weather-city">${cityLabels.get(d.city) || d.city} · ${d.label}</div><div class="weather-detail">Rainfall ${d3.format(".1f")(d.rainfall)} mm</div><div class="calendar-chips">${eventChips(d.event)}</div>${d.event?.top_event_name ? `<div class="event-detail">${escapeHtml(d.event.top_event_name)}</div>` : ""}</div>`);
     }
 
     function drawRainTrend() {
@@ -756,3 +836,4 @@
   </script>
 </body>
 </html>
+
