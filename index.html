@@ -7,11 +7,11 @@
   <meta property="og:type" content="website">
   <meta property="og:title" content="Five-City Weather & Calendar Impact">
   <meta property="og:description" content="Hourly rainfall with public holidays, long weekends, and calendar signals">
-  <meta property="og:image" content="og-calendar.png">
+  <meta property="og:image" content="og.png">
   <meta name="twitter:card" content="summary_large_image">
   <meta name="twitter:title" content="Five-City Business Hours Weather">
   <meta name="twitter:description" content="Business-hours weather dashboard for five cities in Taiwan">
-  <meta name="twitter:image" content="og-calendar.png">
+  <meta name="twitter:image" content="og.png">
   <title>Five-City Weather & Calendar Impact Dashboard</title>
   <script src="https://cdn.jsdelivr.net/npm/d3@7.9.0/dist/d3.min.js"></script>
   <style>
@@ -563,7 +563,6 @@
       const minDate = d3.min(allRows, d => d.date);
       const weatherMaxDate = d3.max(allRows, d => d.date);
       const calendarMaxDate = d3.max(calendarRows, d => d.date);
-      const eventMaxDate = d3.max(eventRows, d => d.date);
       const maxDate = weatherMaxDate < calendarMaxDate ? weatherMaxDate : calendarMaxDate;
       const start7 = d3.utcDay.offset(maxDate, -6);
       availableCities = cityOrder.filter(city => allRows.some(d => d.city === city));
