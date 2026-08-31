@@ -4,6 +4,7 @@
   "stations": 5,
   "hours_per_station_day": 13,
   "calendar_latest_date": "2026-12-31",
-  "updated_at": "2026-08-31T08:11:48+08:00"
+  "event_snapshot_date": "2026-08-31",
+  "event_detail_rows": 466,
+  "updated_at": "2026-08-31T08:31:00+08:00"
 }
-
