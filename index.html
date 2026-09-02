@@ -3,16 +3,16 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="description" content="Business-hours weather, official Taiwan calendar, and event pressure context for five cities">
+  <meta name="description" content="Store-weighted weather and AQI for all 85 OWNDAYS Taiwan stores, with official calendar and event context">
   <meta property="og:type" content="website">
-  <meta property="og:title" content="Five-City Weather & Calendar Impact">
+  <meta property="og:title" content="Taiwan Store Weather, AQI, Calendar & Event Impact">
   <meta property="og:description" content="Hourly rainfall with public holidays, long weekends, and calendar signals">
   <meta property="og:image" content="og.png">
   <meta name="twitter:card" content="summary_large_image">
-  <meta name="twitter:title" content="Five-City Business Hours Weather">
-  <meta name="twitter:description" content="Business-hours weather dashboard for five cities in Taiwan">
+  <meta name="twitter:title" content="Taiwan Store Weather & AQI">
+  <meta name="twitter:description" content="Store-weighted weather and AQI for all 85 OWNDAYS Taiwan stores">
   <meta name="twitter:image" content="og.png">
-  <title>Five-City Weather & Calendar Impact Dashboard</title>
+  <title>Taiwan Store Weather, AQI, Calendar & Event Impact Dashboard</title>
   <script src="https://cdn.jsdelivr.net/npm/d3@7.9.0/dist/d3.min.js"></script>
   <style>
     :root {
@@ -305,8 +305,8 @@
     <header class="hero">
       <div>
         <p class="eyebrow">External Traffic Drivers</p>
-        <h1>Five-City Weather, Calendar & Event Impact</h1>
-        <p class="subtitle">Compare business-hours rainfall with Taiwan public holidays, long weekends, payday timing, and official event pressure across Taipei, New Taipei, Taoyuan, Taichung, and Kaohsiung.</p>
+        <h1>Taiwan Store Weather, AQI, Calendar & Event Impact</h1>
+        <p class="subtitle">Store-weighted weather and AQI now cover all 85 Taiwan stores across 16 markets. Official event pressure remains the separate five-metro dataset.</p>
       </div>
       <div class="data-note" id="dataNote">Loading data…</div>
     </header>
@@ -366,6 +366,7 @@
       </label>
       <div class="download-group">
         <a class="download" href="https://raw.githubusercontent.com/kent261/weather_summary/main/data/weather-hourly.csv" download>Weather CSV</a>
+        <a class="download secondary" href="data/aqi-city-hourly.csv" download>AQI CSV</a>
         <a class="download secondary" href="data/calendar.csv" download>Calendar CSV</a>
         <a class="download secondary" href="data/event-calendar.csv" download>Event CSV</a>
         <a class="download secondary" href="events.html">Event Details</a>
@@ -373,6 +374,11 @@
     </section>
 
     <div class="panel status visible" id="status" role="status">Loading data…</div>
+
+    <section class="panel calendar-context" id="aqiContext" hidden>
+      <div class="panel-head"><h2>Latest Store-Weighted AQI</h2><p>Nearest qualified MOENV general/background station · Equal weight per store</p></div>
+      <div class="context-grid" id="aqiContextGrid"></div>
+    </section>
 
     <section class="panel calendar-context" id="calendarContext" hidden>
       <div class="panel-head"><h2>Calendar Context</h2><p>Official DGPA office calendar | Counts are unique dates</p></div>
@@ -415,7 +421,7 @@
 
     <footer>
       Sources: Central Weather Administration CODiS hourly observations · Directorate-General of Personnel Administration official office calendars · Tourism Administration official event database | Business hours 10:00–22:00
-      <span class="station-source">Stations: Taipei (466920) · New Taipei (466881) · Xinwu / Taoyuan (467050) · Taichung (467490) · Kaohsiung (467441)</span>
+      <span class="station-source">Coverage: 85 stores · Weather uses 43 primary CWA stations (55 with fallback) · AQI uses 33 primary MOENV stations (46 with fallback) · equal weight per store</span>
     </footer>
   </main>
   <div class="tooltip" id="tooltip" role="tooltip"></div>
@@ -424,19 +430,24 @@
     const parseDate = d3.utcParse("%Y-%m-%d");
     const formatDate = d3.utcFormat("%Y-%m-%d");
     const displayDate = d3.utcFormat("%Y/%m/%d");
-    const cityOrder = ["台北", "新北", "桃園", "台中", "高雄"];
+    const cityOrder = ["台北", "新北", "基隆", "桃園", "新竹", "苗栗", "台中", "彰化", "嘉義", "台南", "高雄", "屏東", "宜蘭", "花蓮", "台東", "澎湖"];
     const cityLabels = new Map([
-      ["台北", "Taipei"], ["新北", "New Taipei"], ["桃園", "Taoyuan"],
-      ["台中", "Taichung"], ["高雄", "Kaohsiung"]
+      ["台北", "Taipei"], ["新北", "New Taipei"], ["基隆", "Keelung"], ["桃園", "Taoyuan"],
+      ["新竹", "Hsinchu"], ["苗栗", "Miaoli"], ["台中", "Taichung"], ["彰化", "Changhua"],
+      ["嘉義", "Chiayi"], ["台南", "Tainan"], ["高雄", "Kaohsiung"], ["屏東", "Pingtung"],
+      ["宜蘭", "Yilan"], ["花蓮", "Hualien"], ["台東", "Taitung"], ["澎湖", "Penghu"]
     ]);
     const cityColors = new Map([
-      ["台北", "#2878d0"], ["新北", "#20a4c7"], ["桃園", "#e9872b"],
-      ["台中", "#3c9b72"], ["高雄", "#d34b55"]
+      ["台北", "#2878d0"], ["新北", "#20a4c7"], ["基隆", "#0f766e"], ["桃園", "#e9872b"],
+      ["新竹", "#7c5ce6"], ["苗栗", "#8b5cf6"], ["台中", "#3c9b72"], ["彰化", "#65a30d"],
+      ["嘉義", "#ca8a04"], ["台南", "#b7791f"], ["高雄", "#d34b55"], ["屏東", "#e11d48"],
+      ["宜蘭", "#0891b2"], ["花蓮", "#059669"], ["台東", "#14b8a6"], ["澎湖", "#6366f1"]
     ]);
     const weekdays = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
     const weatherLabels = new Map([
       ["晴", "Clear"], ["多雲", "Partly cloudy"], ["陰", "Cloudy"], ["無雨", "Dry"],
-      ["雨跡", "Trace rain"], ["小雨", "Light rain"], ["中雨", "Moderate rain"], ["大雨", "Heavy rain"]
+      ["雨跡", "Trace rain"], ["局部雨", "Localized rain"], ["雨", "Rain"],
+      ["小雨", "Light rain"], ["中雨", "Moderate rain"], ["大雨", "Heavy rain"]
     ]);
     const tooltip = d3.select("#tooltip");
     let allRows = [];
@@ -444,6 +455,7 @@
     let calendarByDate = new Map();
     let eventRows = [];
     let eventByDateCity = new Map();
+    let aqiRows = [];
     let filteredRows = [];
     let availableCities = [];
     let activeCities = new Set();
@@ -471,6 +483,9 @@
         heavy: +d.heavy_rain || 0,
         temp: d.temp_c === "" ? NaN : +d.temp_c,
         sunshine: d.sunshine_hr === "" ? 0 : (+d.sunshine_hr || 0),
+        storeRainExposure: d.store_rain_exposure_pct === "" || d.store_rain_exposure_pct == null
+          ? NaN
+          : +d.store_rain_exposure_pct,
         weather: d.weather || ""
       };
     }
@@ -497,6 +512,17 @@
         major_event_count: +d.major_event_count || 0,
         event_pressure_score: +d.event_pressure_score || 0,
         has_official_event_record: +d.has_official_event_record || 0,
+      };
+    }
+
+    function aqiRowParser(d) {
+      return {
+        ...d,
+        avgAqi: d.avg_aqi === "" ? NaN : +d.avg_aqi,
+        maxAqi: d.max_aqi === "" ? NaN : +d.max_aqi,
+        avgPm25: d.avg_pm25 === "" ? NaN : +d.avg_pm25,
+        totalStores: +d.total_store_count || 0,
+        validStores: +d.valid_store_count || 0,
       };
     }
 
@@ -550,16 +576,19 @@
     Promise.all([
       d3.csv(dataUrl, rowParser),
       d3.csv("data/calendar.csv", calendarRowParser),
-      d3.csv("data/event-calendar.csv", eventRowParser)
-    ]).then(([weatherRows, loadedCalendarRows, loadedEventRows]) => {
+      d3.csv("data/event-calendar.csv", eventRowParser),
+      d3.csv("data/aqi-city-hourly.csv", aqiRowParser)
+    ]).then(([weatherRows, loadedCalendarRows, loadedEventRows, loadedAqiRows]) => {
       allRows = weatherRows.filter(d => d.date && d.hour >= 10 && d.hour <= 22);
       calendarRows = loadedCalendarRows.filter(d => d.date);
       calendarByDate = new Map(calendarRows.map(d => [d.dateText, d]));
       eventRows = loadedEventRows.filter(d => d.date && d.city);
       eventByDateCity = new Map(eventRows.map(d => [`${d.dateText}|${d.city}`, d]));
+      aqiRows = loadedAqiRows.filter(d => d.publish_time && d.city);
       if (!allRows.length) throw new Error("No valid observations were found in the data file.");
       if (!calendarRows.length) throw new Error("No valid calendar rows were found in the calendar file.");
       if (!eventRows.length) throw new Error("No valid event rows were found in the event file.");
+      if (!aqiRows.length) throw new Error("No valid AQI rows were found in the AQI file.");
 
       const minDate = d3.min(allRows, d => d.date);
       const weatherMaxDate = d3.max(allRows, d => d.date);
@@ -575,7 +604,8 @@
       d3.select("#startDate").attr("min", formatDate(minDate)).attr("max", formatDate(maxDate)).property("value", formatDate(start7 < minDate ? minDate : start7));
       d3.select("#endDate").attr("min", formatDate(minDate)).attr("max", formatDate(maxDate)).property("value", formatDate(maxDate));
       const eventSnapshot = d3.max(eventRows, d => d.source_snapshot_date || "") || "Unknown";
-      d3.select("#dataNote").html(`<strong>${d3.format(",")(allRows.length)}</strong> weather observations<br>Calendar through ${displayDate(calendarMaxDate)} · Events snapshot ${escapeHtml(eventSnapshot.replaceAll("-", "/"))}`);
+      const aqiLatest = d3.max(aqiRows, d => d.publish_time) || "Unknown";
+      d3.select("#dataNote").html(`<strong>${d3.format(",")(allRows.length)}</strong> weather observations<br>AQI ${escapeHtml(aqiLatest)} · Calendar through ${displayDate(calendarMaxDate)} · Events ${escapeHtml(eventSnapshot.replaceAll("-", "/"))}`);
 
       d3.select("#cityFilter").on("change", () => {
         const city = d3.select("#cityFilter").property("value");
@@ -601,7 +631,7 @@
       });
 
       d3.select("#status").classed("visible", false);
-      d3.selectAll("#calendarContext, #eventContext, #dailySummary, #mainCharts, #secondaryCharts").attr("hidden", null);
+      d3.selectAll("#aqiContext, #calendarContext, #eventContext, #dailySummary, #mainCharts, #secondaryCharts").attr("hidden", null);
       updateDashboard();
 
       new ResizeObserver(() => {
@@ -628,23 +658,33 @@
 
       if (!filteredRows.length) {
         d3.select("#status").classed("visible", true).text("No data is available for this selection. Adjust the date range, weekday, city, calendar signal, or event pressure.");
-        d3.selectAll("#calendarContext, #eventContext, #dailySummary, #mainCharts, #secondaryCharts").attr("hidden", true);
+        d3.selectAll("#aqiContext, #calendarContext, #eventContext, #dailySummary, #mainCharts, #secondaryCharts").attr("hidden", true);
         return;
       }
 
       d3.select("#status").classed("visible", false);
-      d3.selectAll("#calendarContext, #eventContext, #dailySummary, #mainCharts, #secondaryCharts").attr("hidden", null);
+      d3.selectAll("#aqiContext, #calendarContext, #eventContext, #dailySummary, #mainCharts, #secondaryCharts").attr("hidden", null);
       drawAll();
     }
 
     function drawAll() {
       if (!filteredRows.length) return;
+      drawAqiContext();
       drawCalendarContext();
       drawEventContext();
       drawDailySummary();
       drawRainTrend();
       drawHeatmap();
       drawWettestTable();
+    }
+
+    function drawAqiContext() {
+      const latest = d3.max(aqiRows, d => d.publish_time);
+      const selected = aqiRows
+        .filter(d => d.publish_time === latest && activeCities.has(d.city))
+        .sort((a, b) => cityOrder.indexOf(a.city) - cityOrder.indexOf(b.city));
+      d3.select("#aqiContextGrid").selectAll("div.context-card").data(selected, d => d.city).join("div").attr("class", "context-card")
+        .html(d => `<div class="context-value">${Number.isFinite(d.maxAqi) ? d3.format(".0f")(d.maxAqi) : "—"}</div><div class="context-label">${escapeHtml(cityLabels.get(d.city) || d.city)} · ${escapeHtml(d.aqi_status || "Unavailable")}</div><div class="context-detail">Avg ${Number.isFinite(d.avgAqi) ? d3.format(".1f")(d.avgAqi) : "—"} · PM2.5 ${Number.isFinite(d.avgPm25) ? d3.format(".1f")(d.avgPm25) : "—"} μg/m³ · ${d.validStores}/${d.totalStores} stores<br>${escapeHtml(latest)}</div>`);
     }
 
     function drawCalendarContext() {
@@ -689,13 +729,15 @@
       const rainfall = d3.sum(rows, d => d.rainfall);
       const maxRain = d3.max(rows, d => d.rainfall) || 0;
       const sunshine = d3.sum(rows, d => d.sunshine);
+      const exposureRows = rows.filter(d => Number.isFinite(d.storeRainExposure));
+      const avgStoreExposure = exposureRows.length ? d3.mean(exposureRows, d => d.storeRainExposure) : NaN;
       let icon = "☁️", label = "Cloudy";
       if (heavyHours > 0 || maxRain >= 15) { icon = "⛈️"; label = "Heavy rain"; }
       else if (rainfall >= 10 || rainyHours >= 6) { icon = "🌧️"; label = "Rainy"; }
       else if (rainyHours > 0) { icon = "🌦️"; label = "Showers"; }
       else if (sunshine >= 4) { icon = "☀️"; label = "Clear"; }
       else if (sunshine >= 1.5) { icon = "🌤️"; label = "Partly cloudy"; }
-      return {icon, label, rainyHours, heavyHours, rainfall};
+      return {icon, label, rainyHours, heavyHours, rainfall, avgStoreExposure};
     }
 
     function drawDailySummary() {
@@ -716,7 +758,7 @@
       rows.append("div").attr("class", "city-weather-grid").selectAll("div.weather-summary")
         .data(d => d.cities).join("div").attr("class", "weather-summary")
         .attr("title", d => `${cityLabels.get(d.city) || d.city} | ${d.label} | Business-hours rainfall ${d3.format(".1f")(d.rainfall)} mm${d.event?.top_event_name ? ` | Top event: ${d.event.top_event_name}` : ""}`)
-        .html(d => `<div class="weather-icon" aria-hidden="true">${d.icon}</div><div><div class="weather-city">${cityLabels.get(d.city) || d.city} · ${d.label}</div><div class="weather-detail">Rainfall ${d3.format(".1f")(d.rainfall)} mm</div><div class="calendar-chips">${eventChips(d.event)}</div>${d.event?.top_event_name ? `<div class="event-detail">${escapeHtml(d.event.top_event_name)}</div>` : ""}</div>`);
+        .html(d => `<div class="weather-icon" aria-hidden="true">${d.icon}</div><div><div class="weather-city">${cityLabels.get(d.city) || d.city} · ${d.label}</div><div class="weather-detail">Rainfall ${d3.format(".1f")(d.rainfall)} mm${Number.isFinite(d.avgStoreExposure) ? ` · Avg store exposure ${d3.format(".0f")(d.avgStoreExposure)}%` : ""}</div><div class="calendar-chips">${eventChips(d.event)}</div>${d.event?.top_event_name ? `<div class="event-detail">${escapeHtml(d.event.top_event_name)}</div>` : ""}</div>`);
     }
 
     function drawRainTrend() {
