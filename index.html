@@ -406,6 +406,7 @@
     <section class="grid-secondary" id="secondaryCharts" hidden>
       <article class="panel chart-panel">
         <div class="panel-head"><h2>Hourly Rainfall Heatmap</h2><p>Date × 10:00–22:00 | Grouped by city</p></div>
+        <div class="legend" id="heatmapLegend" aria-label="Select a city to show or hide its heatmap"></div>
         <div class="chart compact" id="rainHeatmap" role="img" aria-label="Hourly rainfall heatmap by date and city"></div>
       </article>
       <article class="panel chart-panel">
@@ -459,6 +460,7 @@
     let filteredRows = [];
     let availableCities = [];
     let activeCities = new Set();
+    let heatmapActiveCities = new Set();
     let resizeTimer;
 
     function showTooltip(event, html) {
@@ -597,6 +599,7 @@
       const start7 = d3.utcDay.offset(maxDate, -6);
       availableCities = cityOrder.filter(city => allRows.some(d => d.city === city));
       activeCities = new Set(availableCities);
+      heatmapActiveCities = new Set(availableCities);
 
       d3.select("#cityFilter").selectAll("option.city")
         .data(availableCities).join("option").attr("class", "city").attr("value", d => d).text(d => cityLabels.get(d) || d);
@@ -610,6 +613,7 @@
       d3.select("#cityFilter").on("change", () => {
         const city = d3.select("#cityFilter").property("value");
         activeCities = new Set(city === "all" ? availableCities : [city]);
+        heatmapActiveCities = new Set(city === "all" ? availableCities : [city]);
         updateDashboard();
       });
       d3.select("#rangePreset").on("change", () => {
@@ -828,7 +832,8 @@
       root.selectAll("*").remove();
       const margin = {top: 34, right: 18, bottom: 52, left: 58};
       const dates = [...new Set(filteredRows.map(d => d.dateText))].sort();
-      const cities = cityOrder.filter(city => filteredRows.some(d => d.city === city));
+      const allHeatmapCities = cityOrder.filter(city => filteredRows.some(d => d.city === city));
+      const cities = allHeatmapCities.filter(city => heatmapActiveCities.has(city));
       const hours = d3.range(10, 23);
       const containerWidth = Math.max(320, root.node().clientWidth || 640);
       const width = Math.max(containerWidth, dates.length * 42 + margin.left + margin.right);
@@ -866,6 +871,16 @@
           .on("mouseleave", hideTooltip)
           .append("title").text(d => `${d.dateText} ${cityLabels.get(d.city) || d.city} ${d.hour}:00, ${d.rainy && d.rainfall === 0 ? "Trace rain" : `Rainfall ${d3.format(".1f")(d.rainfall)} mm`}`);
       });
+
+      d3.select("#heatmapLegend").selectAll("button.legend-button").data(allHeatmapCities, d => d.city).join("button")
+        .attr("class", "legend-button").attr("type", "button").attr("aria-pressed", d => heatmapActiveCities.has(d))
+        .attr("aria-label", d => `${heatmapActiveCities.has(d) ? "Hide" : "Show"} ${cityLabels.get(d) || d} heatmap`)
+        .html(d => `<span class="legend-dot" style="background:${cityColors.get(d)}"></span>${cityLabels.get(d) || d}`)
+        .on("click", (_, city) => {
+          if (heatmapActiveCities.has(city) && heatmapActiveCities.size === 1) return;
+          if (heatmapActiveCities.has(city)) heatmapActiveCities.delete(city); else heatmapActiveCities.add(city);
+          drawHeatmap();
+        });
     }
 
     function drawWettestTable() {
@@ -879,3 +894,4 @@
   </script>
 </body>
 </html>
+
