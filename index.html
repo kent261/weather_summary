@@ -365,10 +365,10 @@
         <input id="endDate" type="date">
       </label>
       <div class="download-group">
-        <a class="download" href="data/weather-hourly.csv" download="weather-hourly.csv">Weather CSV</a>
-        <a class="download secondary" href="data/aqi-city-hourly.csv" download>AQI CSV</a>
-        <a class="download secondary" href="data/calendar.csv" download>Calendar CSV</a>
-        <a class="download secondary" href="data/event-calendar.csv" download>Event CSV</a>
+        <a class="download csv-download" href="data/weather-hourly.csv" download="weather-hourly.csv">Weather CSV</a>
+        <a class="download secondary csv-download" href="data/aqi-city-hourly.csv" download="aqi-city-hourly.csv">AQI CSV</a>
+        <a class="download secondary csv-download" href="data/calendar.csv" download="calendar.csv">Calendar CSV</a>
+        <a class="download secondary csv-download" href="data/event-calendar.csv" download="event-calendar.csv">Event CSV</a>
         <a class="download secondary" href="events.html">Event Details</a>
       </div>
     </section>
@@ -572,6 +572,34 @@
       if (c.payday_proxy) chips.push('<span class="calendar-chip">Payday proxy</span>');
       return chips.slice(0, 4).join("");
     }
+
+    document.querySelectorAll(".csv-download").forEach(link => {
+      link.addEventListener("click", async event => {
+        event.preventDefault();
+        const originalLabel = link.textContent;
+        link.textContent = "Preparing…";
+        link.setAttribute("aria-busy", "true");
+        try {
+          const response = await fetch(link.href, { cache: "no-store" });
+          if (!response.ok) throw new Error(`Download failed (${response.status})`);
+          const blob = await response.blob();
+          const objectUrl = URL.createObjectURL(blob);
+          const downloader = document.createElement("a");
+          downloader.href = objectUrl;
+          downloader.download = link.getAttribute("download") || "download.csv";
+          document.body.appendChild(downloader);
+          downloader.click();
+          downloader.remove();
+          setTimeout(() => URL.revokeObjectURL(objectUrl), 1000);
+        } catch (error) {
+          console.error(error);
+          alert("The CSV could not be downloaded. Please try again.");
+        } finally {
+          link.textContent = originalLabel;
+          link.removeAttribute("aria-busy");
+        }
+      });
+    });
 
     const dataVersion = new Date().toISOString().slice(0, 10);
     const dataUrl = `https://raw.githubusercontent.com/kent261/weather_summary/main/data/weather-hourly.csv?v=${dataVersion}`;
