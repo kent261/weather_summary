@@ -605,9 +605,9 @@
     const dataUrl = `https://raw.githubusercontent.com/kent261/weather_summary/main/data/weather-hourly.csv?v=${dataVersion}`;
     Promise.all([
       d3.csv(dataUrl, rowParser),
-      d3.csv("data/calendar.csv", calendarRowParser),
-      d3.csv("data/event-calendar.csv", eventRowParser),
-      d3.csv("data/aqi-city-hourly.csv", aqiRowParser)
+      d3.csv(`data/calendar.csv?v=${dataVersion}`, calendarRowParser),
+      d3.csv(`data/event-calendar.csv?v=${dataVersion}`, eventRowParser),
+      d3.csv(`data/aqi-city-hourly.csv?v=${dataVersion}`, aqiRowParser)
     ]).then(([weatherRows, loadedCalendarRows, loadedEventRows, loadedAqiRows]) => {
       allRows = weatherRows.filter(d => d.date && d.hour >= 10 && d.hour <= 22);
       calendarRows = loadedCalendarRows.filter(d => d.date);
