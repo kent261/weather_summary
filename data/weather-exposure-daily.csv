@@ -1,4 +1,4 @@
-date,city,store_rain_exposure_pct,avg_rainy_hours_10_22,avg_rain_mm_10_22,heavy_rain_store_pct,extreme_heat_store_pct,max_rain_mm,affected_store_count,heavy_rain_store_count,extreme_heat_store_count,total_store_count,complete_store_count,fallback_store_count,fallback_slot_count
+﻿date,city,store_rain_exposure_pct,avg_rainy_hours_10_22,avg_rain_mm_10_22,heavy_rain_store_pct,extreme_heat_store_pct,max_rain_mm,affected_store_count,heavy_rain_store_count,extreme_heat_store_count,total_store_count,complete_store_count,fallback_store_count,fallback_slot_count
 2026-08-31,台北,0.0,0.0,0.0,0.0,0.0,0.0,0,0,0,22,22,2,2
 2026-08-31,新北,11.11,0.111,0.0,0.0,0.0,0.0,2,0,0,18,18,6,7
 2026-08-31,基隆,0.0,0.0,0.0,0.0,0.0,0.0,0,0,0,1,1,0,0
