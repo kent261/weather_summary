@@ -376,7 +376,7 @@
     <div class="panel status visible" id="status" role="status">Loading data…</div>
 
     <section class="panel calendar-context" id="aqiContext" hidden>
-      <div class="panel-head"><h2>Latest Store-Weighted AQI</h2><p>Nearest qualified MOENV general/background station · Equal weight per store</p></div>
+      <div class="panel-head"><h2>Latest Store-Weighted AQI</h2><p id="aqiFreshness">Loading latest update time…</p></div>
       <div class="context-grid" id="aqiContextGrid"></div>
     </section>
 
@@ -601,8 +601,9 @@
       });
     });
 
-    const dataVersion = new Date().toISOString().slice(0, 10);
-    const dataUrl = `https://raw.githubusercontent.com/kent261/weather_summary/main/data/weather-hourly.csv?v=${dataVersion}`;
+    // Use a per-page-load cache key so an update published later the same day is visible immediately.
+    const dataVersion = Date.now();
+    const dataUrl = `data/weather-hourly.csv?v=${dataVersion}`;
     Promise.all([
       d3.csv(dataUrl, rowParser),
       d3.csv(`data/calendar.csv?v=${dataVersion}`, calendarRowParser),
@@ -636,7 +637,8 @@
       d3.select("#endDate").attr("min", formatDate(minDate)).attr("max", formatDate(maxDate)).property("value", formatDate(maxDate));
       const eventSnapshot = d3.max(eventRows, d => d.source_snapshot_date || "") || "Unknown";
       const aqiLatest = d3.max(aqiRows, d => d.publish_time) || "Unknown";
-      d3.select("#dataNote").html(`<strong>${d3.format(",")(allRows.length)}</strong> weather observations<br>AQI ${escapeHtml(aqiLatest)} · Calendar through ${displayDate(calendarMaxDate)} · Events ${escapeHtml(eventSnapshot.replaceAll("-", "/"))}`);
+      d3.select("#dataNote").html(`<strong>Weather through ${displayDate(weatherMaxDate)}</strong> · ${d3.format(",")(allRows.length)} observations<br>AQI updated ${escapeHtml(aqiLatest)} · Events snapshot ${escapeHtml(eventSnapshot.replaceAll("-", "/"))} · Calendar through ${displayDate(calendarMaxDate)}`);
+      d3.select("#aqiFreshness").text(`Updated ${aqiLatest} · Nearest qualified MOENV general/background station · Equal weight per store`);
 
       d3.select("#cityFilter").on("change", () => {
         const city = d3.select("#cityFilter").property("value");
@@ -922,3 +924,4 @@
   </script>
 </body>
 </html>
+
